@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block title %}Bilder hochladen - {{ game.title }} - Wiki{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-preview-container {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .image-preview-item {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 10px;
+        position: relative;
+    }
+    
+    .image-preview {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        margin-bottom: 10px;
+        border-radius: 0.25rem;
+    }
+    
+    .primary-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #28a745;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+    }
+    
+    .upload-instructions {
+        background-color: #f8f9fa;
+        border-radius: 0.25rem;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .drag-area {
+        border: 2px dashed #ddd;
+        height: 200px;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        background-color: #f8f9fa;
+        margin-bottom: 20px;
+        transition: border-color 0.3s;
+    }
+    
+    .drag-area.active {
+        border-color: #0d6efd;
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+    
+    .drag-area .icon {
+        font-size: 50px;
+        color: #0d6efd;
+    }
+    
+    .drag-area h4 {
+        margin: 15px 0;
+    }
+    
+    .drag-area p {
+        font-size: 14px;
+        color: #6c757d;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{{ game.get_absolute_url }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Zurück zum Spiel
+        </a>
+    </div>
+    
+    <h1>Bilder hochladen für: {{ game.title }}</h1>
+    
+    <div class="upload-instructions">
+        <h4><i class="fas fa-info-circle me-2"></i> Hinweise zum Bildupload</h4>
+        <ul>
+            <li>Erlaubte Formate: JPG, PNG, GIF</li>
+            <li>Maximale Dateigröße: 5 MB pro Bild</li>
+            <li>Empfohlene Mindestauflösung: 800x600 Pixel</li>
+            <li>Du kannst ein Bild als "Hauptbild" festlegen, welches auf der Spielübersicht angezeigt wird</li>
+        </ul>
+    </div>
+    
+    <form method="POST" enctype="multipart/form-data" id="upload-form">
+        {% csrf_token %}
+        
+        <div class="drag-area mb-4" id="drag-area">
+            <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            <h4>Bilder hierher ziehen</h4>
+            <p>oder</p>
+            <button type="button" class="btn btn-primary" id="browse-btn">Dateien auswählen</button>
+            <input type="file" id="image-input" name="images" multiple accept="image/*" class="d-none">
+        </div>
+        
+        <div id="selected-files" class="mt-3 mb-4"></div>
+        
+        <div id="image-previews" class="image-preview-container">
+            <!-- Previews will be inserted here -->
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-upload me-2"></i> Bilder hochladen
+            </button>
+        </div>
+    </form>
+    
+    <!-- Current Images Section (if any) -->
+    {% if game.images.exists %}
+    <hr class="my-5">
+    <h3>Aktuelle Bilder</h3>
+    <div class="image-preview-container mt-3">
+        {% for image in game.images.all %}
+        <div class="image-preview-item">
+            {% if image.is_primary %}
+            <span class="primary-badge">Hauptbild</span>
+            {% endif %}
+            <img src="{{ image.image.url }}" alt="{{ image.caption }}" class="image-preview">
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <small class="text-muted">{{ image.caption|truncatechars:20|default:"Kein Titel" }}</small>
+                <form method="post" action="{% url 'wiki:delete_game_image' pk=image.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bist du sicher, dass du dieses Bild löschen möchtest?')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Font Awesome -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dragArea = document.getElementById('drag-area');
+        const browseBtn = document.getElementById('browse-btn');
+        const imageInput = document.getElementById('image-input');
+        const selectedFilesContainer = document.getElementById('selected-files');
+        const previewContainer = document.getElementById('image-previews');
+        let uploadFiles = [];
+        
+        // When browse button is clicked, trigger the hidden file input
+        browseBtn.addEventListener('click', () => {
+            imageInput.click();
+        });
+        
+        // When files are selected via file input
+        imageInput.addEventListener('change', function() {
+            const files = this.files;
+            handleFiles(files);
+        });
+        
+        // Drag and drop functionality
+        ['dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // Add active class when dragging over
+        dragArea.addEventListener('dragover', function() {
+            this.classList.add('active');
+        });
+        
+        // Remove active class when drag leaves
+        dragArea.addEventListener('dragleave', function() {
+            this.classList.remove('active');
+        });
+        
+        // Handle drop event
+        dragArea.addEventListener('drop', function(e) {
+            this.classList.remove('active');
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        });
+        
+        // Process the selected files
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            // Update the selected files summary
+            selectedFilesContainer.innerHTML = `<div class="alert alert-info">
+                <strong>${files.length} Bilder</strong> ausgewählt
+            </div>`;
+            
+            // Clear previous previews
+            previewContainer.innerHTML = '';
+            
+            // Add preview for each file
+            Array.from(files).forEach((file, index) => {
+                if (!file.type.match('image.*')) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'image-preview-item';
+                    
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" class="image-preview" alt="Bildvorschau">
+                        <div class="mt-2">
+                            <div class="form-group">
+                                <input type="text" name="captions" class="form-control form-control-sm" placeholder="Bildunterschrift">
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input primary-image-radio" type="radio" name="is_primary" id="primaryImage${index}" value="${index}">
+                                <label class="form-check-label" for="primaryImage${index}">
+                                    Als Hauptbild festlegen
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                    
+                    previewContainer.appendChild(previewItem);
+                }
+                reader.readAsDataURL(file);
+            });
+            
+            // Set the first image as primary by default
+            setTimeout(() => {
+                const firstRadio = document.querySelector('.primary-image-radio');
+                if (firstRadio) firstRadio.checked = true;
+            }, 500);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Wiki - Massive Game Archive{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background-color: #f8f9fa;
+        padding: 4rem 0;
+        border-radius: 0.5rem;
+        margin-bottom: 3rem;
+    }
+    
+    .category-card {
+        height: 100%;
+        transition: transform 0.2s;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .category-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .game-card {
+        height: 100%;
+        transition: transform 0.2s ease;
+    }
+    
+    .game-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+    }
+
+    .section-heading {
+        position: relative;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-heading::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        width: 70px;
+        background-color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="hero-section text-center">
+        <div class="container">
+            <h1 class="display-4 mb-4">Spielewiki</h1>
+            <p class="lead mb-4">
+                Entdecke eine Sammlung von über {{ games_count }} Großgruppenspielen für unterschiedliche 
+                Altersgruppen und Anlässe. Alle Spiele mit detaillierten Anleitungen, Bewertungen und Tipps.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{% url 'wiki:game_list' %}" class="btn btn-primary btn-lg">
+                    Alle Spiele durchsuchen
+                </a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'wiki:new_game' %}" class="btn btn-outline-primary btn-lg">
+                    Neues Spiel hinzufügen
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Section -->
+    <div class="mb-5">
+        <h2 class="section-heading">Beliebte Kategorien</h2>
+        
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            {% for category in popular_categories %}
+            <div class="col">
+                <div class="card category-card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ category.name }}</h5>
+                        <p class="card-text text-muted">{{ category.game_count }} Spiele</p>
+                        <a href="{% url 'wiki:game_list' %}?categories={{ category.id }}" class="stretched-link"></a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col">
+                <p>Noch keine Kategorien vorhanden.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Newest Games -->
+    <div class="mb-5">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <h2 class="section-heading mb-0">Neueste Spiele</h2>
+            <a href="{% url 'wiki:game_list' %}?sort=newest" class="btn btn-outline-primary">Alle anzeigen</a>
+        </div>
+        
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for game in newest_games %}
+            <div class="col">
+                <div class="card game-card h-100">
+                    {% if game.images.exists %}
+                    <img src="{{ game.images.first.image.url }}" class="card-img-top" alt="{{ game.title }}" style="height: 180px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
+                        <i class="fas fa-gamepad fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">{{ game.title }}</h5>
+                        
+                        <div class="mb-2">
+                            <div class="rating-stars">
+                                {% for i in "12345" %}
+                                {% if forloop.counter <= game.avg_rating|floatformat:"0" %}
+                                <i class="fas fa-star"></i>
+                                {% elif forloop.counter <= game.avg_rating|add:"0.5"|floatformat:"0" %}
+                                <i class="fas fa-star-half-alt"></i>
+                                {% else %}
+                                <i class="far fa-star"></i>
+                                {% endif %}
+                                {% endfor %}
+                                <small class="text-muted ms-1">({{ game.rating_count }})</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            {% for category in game.categories.all|slice:":2" %}
+                            <span class="badge bg-secondary me-1">{{ category.name }}</span>
+                            {% endfor %}
+                            {% if game.categories.count > 2 %}
+                            <span class="badge bg-secondary">+{{ game.categories.count|add:"-2" }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex gap-2 mb-3 small text-muted">
+                            <span><i class="fas fa-users me-1"></i> {{ game.min_players }}{% if game.max_players %}-{{ game.max_players }}{% endif %}</span>
+                            <span><i class="far fa-clock me-1"></i> {{ game.duration }} Min</span>
+                        </div>
+                        
+                        <p class="card-text small">{{ game.description|truncatechars:100 }}</p>
+                    </div>
+                    <div class="card-footer bg-white d-grid">
+                        <a href="{{ game.get_absolute_url }}" class="btn btn-outline-primary stretched-link">Details anzeigen</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col">
+                <div class="alert alert-light">Noch keine Spiele vorhanden.</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Top Rated Games -->
+    <div class="mb-5">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <h2 class="section-heading mb-0">Bestbewertete Spiele</h2>
+            <a href="{% url 'wiki:game_list' %}?sort=rating" class="btn btn-outline-primary">Alle anzeigen</a>
+        </div>
+        
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for game in top_rated_games %}
+            <div class="col">
+                <div class="card game-card h-100">
+                    {% if game.images.exists %}
+                    <img src="{{ game.images.first.image.url }}" class="card-img-top" alt="{{ game.title }}" style="height: 180px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
+                        <i class="fas fa-gamepad fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">{{ game.title }}</h5>
+                        
+                        <div class="mb-2">
+                            <div class="rating-stars">
+                                {% for i in "12345" %}
+                                {% if forloop.counter <= game.avg_rating|floatformat:"0" %}
+                                <i class="fas fa-star"></i>
+                                {% elif forloop.counter <= game.avg_rating|add:"0.5"|floatformat:"0" %}
+                                <i class="fas fa-star-half-alt"></i>
+                                {% else %}
+                                <i class="far fa-star"></i>
+                                {% endif %}
+                                {% endfor %}
+                                <small class="text-muted ms-1">({{ game.rating_count }})</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            {% for category in game.categories.all|slice:":2" %}
+                            <span class="badge bg-secondary me-1">{{ category.name }}</span>
+                            {% endfor %}
+                            {% if game.categories.count > 2 %}
+                            <span class="badge bg-secondary">+{{ game.categories.count|add:"-2" }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex gap-2 mb-3 small text-muted">
+                            <span><i class="fas fa-users me-1"></i> {{ game.min_players }}{% if game.max_players %}-{{ game.max_players }}{% endif %}</span>
+                            <span><i class="far fa-clock me-1"></i> {{ game.duration }} Min</span>
+                        </div>
+                        
+                        <p class="card-text small">{{ game.description|truncatechars:100 }}</p>
+                    </div>
+                    <div class="card-footer bg-white d-grid">
+                        <a href="{{ game.get_absolute_url }}" class="btn btn-outline-primary stretched-link">Details anzeigen</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col">
+                <div class="alert alert-light">Noch keine Spiele vorhanden.</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Font Awesome -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}

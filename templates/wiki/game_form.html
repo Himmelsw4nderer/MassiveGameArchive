@@ -1,0 +1,421 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if form.instance.pk %}Spiel bearbeiten{% else %}Neues Spiel erstellen{% endif %} - Wiki{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<style>
+    .form-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-section-title {
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .CodeMirror, .CodeMirror-scroll {
+        min-height: 200px;
+    }
+    
+    .form-text {
+        font-size: 0.875rem;
+    }
+    
+    .markdown-preview {
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        background-color: #fff;
+    }
+    
+    .badge-preview {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+        background-color: #6c757d;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .markdown-help {
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .markdown-help table {
+        width: 100%;
+    }
+    
+    .markdown-help td {
+        padding: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .markdown-help code {
+        background-color: #f1f3f5;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.2rem;
+    }
+    
+    .select2-container--default .select2-selection--multiple {
+        min-height: 38px;
+        border-color: #ced4da;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'wiki:game_list' %}{% endif %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Zurück
+        </a>
+    </div>
+    
+    <h1>{% if form.instance.pk %}Spiel bearbeiten{% else %}Neues Spiel erstellen{% endif %}</h1>
+    
+    <div class="alert alert-info my-4">
+        <i class="fas fa-info-circle me-2"></i>
+        Alle mit <span class="text-danger">*</span> gekennzeichneten Felder sind Pflichtfelder.
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <!-- Basic Information Section -->
+        <div class="form-section">
+            <h3 class="form-section-title">Grundinformationen</h3>
+            
+            <div class="row g-3">
+                <div class="col-12">
+                    <label for="id_title" class="form-label">Titel <span class="text-danger">*</span></label>
+                    <input type="text" name="title" id="id_title" class="form-control {% if form.title.errors %}is-invalid{% endif %}" 
+                           value="{{ form.title.value|default:'' }}" required>
+                    {% if form.title.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.title.errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="id_categories" class="form-label">Kategorien <span class="text-danger">*</span></label>
+                    <select name="categories" id="id_categories" class="form-select select2 {% if form.categories.errors %}is-invalid{% endif %}" 
+                           multiple required>
+                        {% for category in form.fields.categories.queryset %}
+                            <option value="{{ category.id }}" {% if category.id in form.categories.value %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.categories.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.categories.errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="id_age_groups" class="form-label">Altersgruppen <span class="text-danger">*</span></label>
+                    <select name="age_groups" id="id_age_groups" class="form-select select2 {% if form.age_groups.errors %}is-invalid{% endif %}" 
+                           multiple required>
+                        {% for age_group in form.fields.age_groups.queryset %}
+                            <option value="{{ age_group.id }}" {% if age_group.id in form.age_groups.value %}selected{% endif %}>
+                                {{ age_group }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.age_groups.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.age_groups.errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Details Section -->
+        <div class="form-section">
+            <h3 class="form-section-title">Spieldetails</h3>
+            
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label for="id_min_players" class="form-label">Min. Spieleranzahl <span class="text-danger">*</span></label>
+                    <input type="number" name="min_players" id="id_min_players" class="form-control {% if form.min_players.errors %}is-invalid{% endif %}" 
+                           value="{{ form.min_players.value|default:'2' }}" min="1" required>
+                    {% if form.min_players.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.min_players.errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="id_max_players" class="form-label">Max. Spieleranzahl</label>
+                    <input type="number" name="max_players" id="id_max_players" class="form-control {% if form.max_players.errors %}is-invalid{% endif %}" 
+                           value="{{ form.max_players.value|default:'' }}" min="1">
+                    <div class="form-text">Freilassen, wenn unbegrenzt</div>
+                    {% if form.max_players.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.max_players.errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="id_duration" class="form-label">Spieldauer (Minuten) <span class="text-danger">*</span></label>
+                    <input type="number" name="duration" id="id_duration" class="form-control {% if form.duration.errors %}is-invalid{% endif %}" 
+                           value="{{ form.duration.value|default:'15' }}" min="1" required>
+                    {% if form.duration.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.duration.errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="id_difficulty" class="form-label">Schwierigkeitsgrad <span class="text-danger">*</span></label>
+                    <select name="difficulty" id="id_difficulty" class="form-select {% if form.difficulty.errors %}is-invalid{% endif %}" required>
+                        {% for value, label in form.fields.difficulty.choices %}
+                        <option value="{{ value }}" {% if value == form.difficulty.value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.difficulty.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.difficulty.errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label d-block">Spielort <span class="text-danger">*</span></label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="indoor" id="id_indoor" 
+                               {% if form.indoor.value %}checked{% endif %}>
+                        <label class="form-check-label" for="id_indoor">Innen</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="outdoor" id="id_outdoor" 
+                               {% if form.outdoor.value %}checked{% endif %}>
+                        <label class="form-check-label" for="id_outdoor">Außen</label>
+                    </div>
+                    {% if form.indoor.errors or form.outdoor.errors %}
+                    <div class="invalid-feedback d-block">
+                        Bitte wähle mindestens einen Spielort aus.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Description Section with Markdown -->
+        <div class="form-section">
+            <h3 class="form-section-title">Beschreibung</h3>
+            
+            <div class="mb-4">
+                <label for="id_description" class="form-label">Kurze Beschreibung <span class="text-danger">*</span></label>
+                <textarea name="description" id="id_description" class="form-control markdown-editor {% if form.description.errors %}is-invalid{% endif %}" 
+                          rows="5" required>{{ form.description.value|default:'' }}</textarea>
+                <div class="form-text">Eine kurze Zusammenfassung des Spiels (ca. 2-3 Sätze)</div>
+                {% if form.description.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Rules Section with Markdown -->
+        <div class="form-section">
+            <h3 class="form-section-title">Spielregeln</h3>
+            
+            <div class="mb-4">
+                <label for="id_rules" class="form-label">Regeln <span class="text-danger">*</span></label>
+                <textarea name="rules" id="id_rules" class="form-control markdown-editor {% if form.rules.errors %}is-invalid{% endif %}" 
+                          rows="10" required>{{ form.rules.value|default:'' }}</textarea>
+                <div class="form-text">Beschreibe die Spielregeln detailliert und verständlich.</div>
+                {% if form.rules.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.rules.errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Preparation Section with Markdown -->
+        <div class="form-section">
+            <h3 class="form-section-title">Vorbereitung (optional)</h3>
+            
+            <div class="mb-4">
+                <label for="id_preparation" class="form-label">Vorbereitungsschritte</label>
+                <textarea name="preparation" id="id_preparation" class="form-control markdown-editor {% if form.preparation.errors %}is-invalid{% endif %}" 
+                          rows="5">{{ form.preparation.value|default:'' }}</textarea>
+                <div class="form-text">Beschreibe, wie das Spiel vorbereitet werden muss (z.B. Materialien auslegen, Gruppen einteilen, Spielfeld vorbereiten)</div>
+                {% if form.preparation.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.preparation.errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tips Section with Markdown -->
+        <div class="form-section">
+            <h3 class="form-section-title">Tipps (optional)</h3>
+            
+            <div class="mb-4">
+                <label for="id_tips" class="form-label">Tipps für Spielleiter</label>
+                <textarea name="tips" id="id_tips" class="form-control markdown-editor {% if form.tips.errors %}is-invalid{% endif %}" 
+                          rows="5">{{ form.tips.value|default:'' }}</textarea>
+                <div class="form-text">Hilfreiche Tipps für Spielleiter, häufige Fehler oder besondere Hinweise</div>
+                {% if form.tips.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.tips.errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Markdown Help Section -->
+        <div class="form-section">
+            <h3 class="form-section-title">Hilfe zur Textformatierung</h3>
+            
+            <p>Du kannst Markdown verwenden, um deinen Text zu formatieren:</p>
+            
+            <div class="markdown-help">
+                <table>
+                    <tr>
+                        <td><code># Überschrift</code></td>
+                        <td>Erstellt eine große Überschrift</td>
+                    </tr>
+                    <tr>
+                        <td><code>## Unterüberschrift</code></td>
+                        <td>Erstellt eine kleinere Überschrift</td>
+                    </tr>
+                    <tr>
+                        <td><code>**fett**</code></td>
+                        <td>Macht Text <strong>fett</strong></td>
+                    </tr>
+                    <tr>
+                        <td><code>*kursiv*</code></td>
+                        <td>Macht Text <em>kursiv</em></td>
+                    </tr>
+                    <tr>
+                        <td><code>- Listenpunkt</code></td>
+                        <td>Erstellt eine Liste mit Punkten</td>
+                    </tr>
+                    <tr>
+                        <td><code>1. Nummerierte Liste</code></td>
+                        <td>Erstellt eine nummerierte Liste</td>
+                    </tr>
+                    <tr>
+                        <td><code>[Link](https://example.com)</code></td>
+                        <td>Erstellt einen Link</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Submit Buttons -->
+        <div class="d-flex justify-content-between my-4">
+            <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'wiki:game_list' %}{% endif %}" class="btn btn-outline-secondary">Abbrechen</a>
+            <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Änderungen speichern{% else %}Spiel erstellen{% endif %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Font Awesome -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<!-- Select2 for better select boxes -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- EasyMDE for Markdown editing -->
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize all markdown editors
+        document.querySelectorAll('.markdown-editor').forEach(function(element) {
+            new EasyMDE({
+                element: element,
+                spellChecker: false,
+                autosave: {
+                    enabled: true,
+                    uniqueId: 'game-form-' + element.id,
+                    delay: 1000,
+                },
+                toolbar: [
+                    'bold', 'italic', 'heading', '|', 
+                    'unordered-list', 'ordered-list', '|',
+                    'link', 'quote', 'table', '|',
+                    'preview', 'side-by-side', 'fullscreen', '|',
+                    'guide'
+                ]
+            });
+        });
+        
+        // Initialize Select2 for better multi-select experience
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Bitte auswählen...',
+            allowClear: true
+        });
+        
+        // Form validation
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        Array.prototype.slice.call(forms).forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                form.classList.add('was-validated');
+            }, false);
+        });
+        
+        // Verify that at least one location is selected
+        document.getElementById('id_indoor').addEventListener('change', validateLocation);
+        document.getElementById('id_outdoor').addEventListener('change', validateLocation);
+        
+        function validateLocation() {
+            const indoor = document.getElementById('id_indoor').checked;
+            const outdoor = document.getElementById('id_outdoor').checked;
+            
+            if (!indoor && !outdoor) {
+                // Both are unchecked, show an error
+                document.getElementById('id_indoor').setCustomValidity('Bitte wähle mindestens einen Spielort aus.');
+                document.getElementById('id_outdoor').setCustomValidity('Bitte wähle mindestens einen Spielort aus.');
+            } else {
+                // At least one is checked, clear the error
+                document.getElementById('id_indoor').setCustomValidity('');
+                document.getElementById('id_outdoor').setCustomValidity('');
+            }
+        }
+        
+        // Initial validation
+        validateLocation();
+    });
+</script>
+{% endblock %}

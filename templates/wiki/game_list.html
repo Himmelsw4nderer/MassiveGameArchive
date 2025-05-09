@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+
+{% block title %}Wiki - Spiele{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-form {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .card-game {
+        height: 100%;
+        transition: transform 0.2s ease;
+    }
+    
+    .card-game:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+    }
+    
+    .badge-age {
+        background-color: #17a2b8;
+    }
+    
+    .badge-players {
+        background-color: #6f42c1;
+    }
+    
+    .badge-duration {
+        background-color: #fd7e14;
+    }
+    
+    .badge-difficulty {
+        background-color: #20c997;
+    }
+    
+    .filter-collapse-btn {
+        display: block;
+        width: 100%;
+        text-align: left;
+        position: relative;
+        font-weight: bold;
+    }
+    
+    .filter-collapse-btn::after {
+        content: '\f078';
+        font-family: 'Font Awesome 5 Free';
+        position: absolute;
+        right: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .filter-collapse-btn:not(.collapsed)::after {
+        transform: rotate(180deg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Wiki - Spielsammlung</h1>
+    
+    <!-- Filter Form -->
+    <div class="filter-form">
+        <button class="btn btn-primary filter-collapse-btn mb-3 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+            Filter anzeigen/ausblenden
+        </button>
+        
+        <div class="collapse" id="filterCollapse">
+            <form method="get" action="{% url 'wiki:game_list' %}">
+                <div class="row g-3">
+                    <!-- Search -->
+                    <div class="col-12">
+                        <div class="input-group">
+                            <span class="input-group-text">Suche</span>
+                            <input type="text" name="q" class="form-control" placeholder="Spielname oder Beschreibung" value="{{ request.GET.q|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Categories -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">Kategorien</label>
+                        <select name="categories" class="form-select" multiple>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if category.id|stringformat:"i" in request.GET.categories|default:'' %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Age Groups -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">Altersgruppen</label>
+                        <select name="age_groups" class="form-select" multiple>
+                            {% for age_group in age_groups %}
+                            <option value="{{ age_group.id }}" {% if age_group.id|stringformat:"i" in request.GET.age_groups|default:'' %}selected{% endif %}>
+                                {{ age_group }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Number of Players -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">Spieleranzahl</label>
+                        <div class="input-group">
+                            <input type="number" name="min_players" class="form-control" placeholder="Min" min="1" value="{{ request.GET.min_players|default:'' }}">
+                            <span class="input-group-text">bis</span>
+                            <input type="number" name="max_players" class="form-control" placeholder="Max" min="1" value="{{ request.GET.max_players|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Duration -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">Spieldauer (Minuten)</label>
+                        <div class="input-group">
+                            <input type="number" name="min_duration" class="form-control" placeholder="Min" min="1" value="{{ request.GET.min_duration|default:'' }}">
+                            <span class="input-group-text">bis</span>
+                            <input type="number" name="max_duration" class="form-control" placeholder="Max" min="1" value="{{ request.GET.max_duration|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Difficulty -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">Schwierigkeitsgrad</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="difficultyEasy" name="difficulty" value="easy" {% if 'easy' in request.GET.difficulty|default:'' %}checked{% endif %}>
+                                <label class="form-check-label" for="difficultyEasy">Leicht</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="difficultyMedium" name="difficulty" value="medium" {% if 'medium' in request.GET.difficulty|default:'' %}checked{% endif %}>
+                                <label class="form-check-label" for="difficultyMedium">Mittel</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="difficultyHard" name="difficulty" value="hard" {% if 'hard' in request.GET.difficulty|default:'' %}checked{% endif %}>
+                                <label class="form-check-label" for="difficultyHard">Schwer</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Location -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">Spielort</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="locationIndoor" name="indoor" value="1" {% if request.GET.indoor == '1' %}checked{% endif %}>
+                                <label class="form-check-label" for="locationIndoor">Drinnen</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="locationOutdoor" name="outdoor" value="1" {% if request.GET.outdoor == '1' %}checked{% endif %}>
+                                <label class="form-check-label" for="locationOutdoor">Draußen</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sorting -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">Sortierung</label>
+                        <select name="sort" class="form-select">
+                            <option value="newest" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>Neueste zuerst</option>
+                            <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Beste Bewertung</option>
+                            <option value="popularity" {% if request.GET.sort == 'popularity' %}selected{% endif %}>Beliebtheit</option>
+                            <option value="title" {% if request.GET.sort == 'title' %}selected{% endif %}>Alphabetisch (A-Z)</option>
+                            <option value="duration" {% if request.GET.sort == 'duration' %}selected{% endif %}>Kurze Spieldauer zuerst</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-primary me-2">Filter anwenden</button>
+                        <a href="{% url 'wiki:game_list' %}" class="btn btn-outline-secondary">Filter zurücksetzen</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Results -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Ergebnisse <small class="text-muted">({{ games.count }} Spiele gefunden)</small></h2>
+        </div>
+    </div>
+    
+    {% if games %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-5">
+        {% for game in games %}
+        <div class="col">
+            <div class="card card-game">
+                {% if game.images.exists %}
+                <img src="{{ game.images.first.image.url }}" class="card-img-top" alt="{{ game.title }}" style="height: 200px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                    <i class="fas fa-gamepad fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <h5 class="card-title">{{ game.title }}</h5>
+                    
+                    <div class="mb-2">
+                        <!-- Rating -->
+                        <div class="rating-stars">
+                            {% for i in "12345" %}
+                            {% if forloop.counter <= game.avg_rating|floatformat:"0" %}
+                            <i class="fas fa-star"></i>
+                            {% elif forloop.counter <= game.avg_rating|add:"0.5"|floatformat:"0" %}
+                            <i class="fas fa-star-half-alt"></i>
+                            {% else %}
+                            <i class="far fa-star"></i>
+                            {% endif %}
+                            {% endfor %}
+                            <small class="text-muted ms-1">({{ game.rating_count }})</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {% for category in game.categories.all|slice:":3" %}
+                        <span class="badge bg-secondary mb-1 me-1">{{ category.name }}</span>
+                        {% endfor %}
+                        {% if game.categories.count > 3 %}
+                        <span class="badge bg-secondary mb-1">+{{ game.categories.count|add:"-3" }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge badge-age">
+                            <i class="fas fa-child me-1"></i> 
+                            {% for age_group in game.age_groups.all|slice:":1" %}
+                            {{ age_group.min_age }}{% if age_group.max_age %}–{{ age_group.max_age }}{% endif %} Jahre
+                            {% endfor %}
+                            {% if game.age_groups.count > 1 %}+{% endif %}
+                        </span>
+                        
+                        <span class="badge badge-players">
+                            <i class="fas fa-users me-1"></i> 
+                            {{ game.min_players }}{% if game.max_players %}–{{ game.max_players }}{% endif %} Spieler
+                        </span>
+                        
+                        <span class="badge badge-duration">
+                            <i class="far fa-clock me-1"></i> 
+                            {{ game.duration }} Min
+                        </span>
+                        
+                        <span class="badge badge-difficulty">
+                            <i class="fas fa-signal me-1"></i> 
+                            {{ game.get_difficulty_display }}
+                        </span>
+                    </div>
+                    
+                    <p class="card-text small text-muted">{{ game.description|truncatechars:100 }}</p>
+                    
+                    <a href="{{ game.get_absolute_url }}" class="btn btn-primary stretched-link">Details anzeigen</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;&laquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;&raquo;</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i> Keine Spiele gefunden, die deinen Filterkriterien entsprechen.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Font Awesome -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}
