@@ -52,16 +52,12 @@ class ProfileUpdateForm(forms.Form):
     """Form for updating profile information."""
     bio = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), required=False)
     location = forms.CharField(max_length=100, required=False)
-    avatar = forms.ImageField(required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Add Bootstrap classes to form fields
         for field_name in self.fields:
-            if field_name != 'avatar':
-                self.fields[field_name].widget.attrs['class'] = 'form-control'
-            else:
-                self.fields[field_name].widget.attrs['class'] = 'form-control-file'
+            self.fields[field_name].widget.attrs['class'] = 'form-control'
 
 
 class CustomAuthForm(AuthenticationForm):

@@ -1,17 +1,19 @@
+
 from django.db import models
-from django.utils.text import slugify
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils.text import slugify
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+User = get_user_model()
 
 
-class Category(models.Model):
-    name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-
-    class Meta:
-        verbose_name_plural = "Categories"
-        ordering = ["name"]
+class Tag(models.Model):
+    """
+    Model representing a tag for categorizing games.
+    """
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -21,143 +23,233 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ['name']
+
 
 class AgeGroup(models.Model):
-    name = models.CharField(max_length=50)
-    min_age = models.PositiveIntegerField()
-    max_age = models.PositiveIntegerField(null=True, blank=True)
-
-    class Meta:
-        ordering = ["min_age"]
+    """
+    Model representing different age groups for games.
+    """
+    name = models.CharField(max_length=50, unique=True)
+    min_age = models.PositiveSmallIntegerField(default=0)
+    max_age = models.PositiveSmallIntegerField(null=True, blank=True)
 
     def __str__(self):
         if self.max_age:
-            return f"{self.name} ({self.min_age}-{self.max_age} Jahre)"
-        return f"{self.name} (ab {self.min_age} Jahre)"
+            return f"{self.name} ({self.min_age}-{self.max_age} years)"
+        return f"{self.name} ({self.min_age}+ years)"
 
-
-class GameMaterial(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    
     class Meta:
-        ordering = ["name"]
+        ordering = ['min_age']
+
+
+class Resource(models.Model):
+    """
+    Model representing an external resource (like images, documents) for a game.
+    """
+    TYPE_CHOICES = [
+        ('image', 'Image'),
+        ('document', 'Document'),
+        ('video', 'Video'),
+        ('audio', 'Audio'),
+        ('other', 'Other'),
+    ]
+
+    title = models.CharField(max_length=100)
+    resource_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    url = models.URLField(max_length=500)
+    description = models.TextField(blank=True)
+    game = models.ForeignKey('Game', on_delete=models.CASCADE, related_name='resources')
 
     def __str__(self):
-        return self.name
+        return f"{self.title} ({self.get_resource_type_display()})"
+
+    class Meta:
+        ordering = ['title']
 
 
 class Game(models.Model):
-    DIFFICULTY_CHOICES = [
-        ('easy', 'Leicht'),
-        ('medium', 'Mittel'),
-        ('hard', 'Schwer'),
+    """
+    Model representing a game in the archive.
+    """
+    COMPLEXITY_CHOICES = [
+        (1, 'Very Simple'),
+        (2, 'Simple'),
+        (3, 'Moderate'),
+        (4, 'Complex'),
+        (5, 'Very Complex'),
     ]
-    
+
     title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=200, unique=True)
-    description = models.TextField()
-    rules = models.TextField()
-    preparation = models.TextField(blank=True)
-    tips = models.TextField(blank=True)
-    
-    min_players = models.PositiveIntegerField(default=2)
-    max_players = models.PositiveIntegerField(null=True, blank=True)
-    duration = models.PositiveIntegerField(help_text="Ungefähre Spieldauer in Minuten")
-    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='medium')
-    
-    categories = models.ManyToManyField(Category, related_name='games')
-    age_groups = models.ManyToManyField(AgeGroup, related_name='games')
-    materials = models.ManyToManyField(GameMaterial, through='GameMaterialRequirement')
-    
-    indoor = models.BooleanField(default=True, help_text="Spiel ist für drinnen geeignet")
-    outdoor = models.BooleanField(default=False, help_text="Spiel ist für draußen geeignet")
-    
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='games_created')
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
+    content = models.TextField(help_text="Markdown formatted game description and rules")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
-    rating_count = models.PositiveIntegerField(default=0)
-    
-    class Meta:
-        ordering = ["-created_at"]
+
+    # Relationships
+    creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_games')
+    tags = models.ManyToManyField(Tag, related_name='games', blank=True)
+    age_groups = models.ManyToManyField(AgeGroup, related_name='games', blank=True)
+    parent_game = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name='variants')
+
+    # Game properties
+    complexity = models.PositiveSmallIntegerField(
+        choices=COMPLEXITY_CHOICES,
+        default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+
+    # Popularity metrics
+    upvotes = models.PositiveIntegerField(default=0)
+    downvotes = models.PositiveIntegerField(default=0)
+    view_count = models.PositiveIntegerField(default=0)
+
+    # Additional properties
+    is_variant = models.BooleanField(default=False)
+    variant_name = models.CharField(max_length=200, blank=True,
+                                   help_text="Name of this variant (if this is a variant)")
 
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)
+
+        # Set is_variant flag based on parent_game
+        if self.parent_game and not self.is_variant:
+            self.is_variant = True
+
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return self.title
-    
     def get_absolute_url(self):
-        return reverse('wiki:game_detail', kwargs={'slug': self.slug})
+        return reverse('game_detail', args=[str(self.slug)])
 
+    @property
+    def score(self):
+        """Calculate Reddit-like score: upvotes - downvotes"""
+        return self.upvotes - self.downvotes
 
-class GameMaterialRequirement(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.CASCADE)
-    material = models.ForeignKey(GameMaterial, on_delete=models.CASCADE)
-    quantity = models.CharField(max_length=50, blank=True, help_text="z.B. '2 Stück' oder 'pro Spieler 1'")
-    required = models.BooleanField(default=True, help_text="Ist das Material zwingend notwendig?")
-    
+    @property
+    def popularity_index(self):
+        """
+        Calculate a popularity index based on upvotes, view count, and comment count
+        This is a placeholder implementation that can be enhanced later
+        """
+        comment_count = self.comments.count()
+        # Simple weighted formula
+        return (self.score * 3) + (comment_count * 2) + (self.view_count * 0.1)
+
+    def __str__(self):
+        if self.is_variant and self.variant_name:
+            return f"{self.title} - {self.variant_name}"
+        return self.title
+
     class Meta:
-        unique_together = ['game', 'material']
-    
-    def __str__(self):
-        return f"{self.material.name} für {self.game.title}"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['upvotes']),
+        ]
 
 
-class GameImage(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='game_images/')
-    caption = models.CharField(max_length=200, blank=True)
-    is_primary = models.BooleanField(default=False)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ["-is_primary", "-uploaded_at"]
+class GameVote(models.Model):
+    """
+    Model to track user votes on games to prevent duplicate voting
+    """
+    VOTE_CHOICES = [
+        ('up', 'Upvote'),
+        ('down', 'Downvote'),
+        ('none', 'No Vote'),
+    ]
 
-    def __str__(self):
-        return f"Bild für {self.game.title}"
-
-
-class GameVariant(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='variants')
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"{self.title} (Variante von {self.game.title})"
-
-
-class GameRating(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='ratings')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    rating = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 6)])  # 1-5 star rating
-    review = models.TextField(blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='game_votes')
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='user_votes')
+    vote_type = models.CharField(max_length=4, choices=VOTE_CHOICES, default='none')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        unique_together = ['game', 'user']
-        ordering = ["-created_at"]
-    
+        unique_together = ('user', 'game')
+        indexes = [
+            models.Index(fields=['user', 'game']),
+        ]
+
     def __str__(self):
-        return f"{self.user.username}: {self.rating} Sterne für {self.game.title}"
+        return f"{self.user.username}'s {self.get_vote_type_display()} on {self.game.title}"
+
+
+class Comment(models.Model):
+    """
+    Model representing comments on games.
+    """
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='game_comments')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Comment metrics
+    upvotes = models.PositiveIntegerField(default=0)
+    downvotes = models.PositiveIntegerField(default=0)
+
+    @property
+    def score(self):
+        """Calculate Reddit-like score: upvotes - downvotes"""
+        return self.upvotes - self.downvotes
+
+    def __str__(self):
+        return f"Comment by {self.author.username if self.author else 'Anonymous'} on {self.game.title}"
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class CommentVote(models.Model):
+    """
+    Model to track user votes on comments to prevent duplicate voting
+    """
+    VOTE_CHOICES = [
+        ('up', 'Upvote'),
+        ('down', 'Downvote'),
+        ('none', 'No Vote'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comment_votes')
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='user_votes')
+    vote_type = models.CharField(max_length=4, choices=VOTE_CHOICES, default='none')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'comment')
+        indexes = [
+            models.Index(fields=['user', 'comment']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}'s {self.get_vote_type_display()} on comment {self.comment.id}"
+
+
+class VariantCollection(models.Model):
+    """
+    Model representing a collection of game variants.
+    """
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    base_game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='variant_collections')
+    creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='variant_collections')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Update the game's average rating when a new rating is saved
-        is_new = self.pk is None
+        if not self.slug:
+            self.slug = slugify(self.name)
         super().save(*args, **kwargs)
-        
-        # Recalculate average
-        avg = self.game.ratings.aggregate(models.Avg('rating'))['rating__avg'] or 0
-        count = self.game.ratings.count()
-        
-        # Update the game object
-        self.game.avg_rating = avg
-        self.game.rating_count = count
-        self.game.save(update_fields=['avg_rating', 'rating_count'])
+
+    def __str__(self):
+        return f"{self.name} (for {self.base_game.title})"
+
+    class Meta:
+        ordering = ['name']

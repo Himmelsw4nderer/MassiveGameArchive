@@ -11,13 +11,9 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4 text-center mb-4 mb-md-0">
-                        {% if user.profile.avatar %}
-                            <img src="{{ user.profile.avatar.url }}" alt="Profile Avatar" class="img-fluid rounded-circle mb-3" style="max-height: 200px;">
-                        {% else %}
-                            <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 200px; height: 200px;">
-                                <span class="display-4">{{ user.username.0|upper }}</span>
-                            </div>
-                        {% endif %}
+                        <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px;">
+                            <span class="display-4">{{ user.username.0|upper }}</span>
+                        </div>
                         <div class="d-grid gap-2">
                             <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary">Edit Profile</a>
                             <a href="{% url 'change_password' %}" class="btn btn-outline-secondary">Change Password</a>

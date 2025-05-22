@@ -36,7 +36,7 @@ def edit_profile(request):
     """View for editing user profile."""
     if request.method == 'POST':
         u_form = UserUpdateForm(request.POST, instance=request.user)
-        p_form = ProfileUpdateForm(request.POST, request.FILES)
+        p_form = ProfileUpdateForm(request.POST)
 
         if u_form.is_valid() and p_form.is_valid():
             u_form.save()
@@ -45,9 +45,6 @@ def edit_profile(request):
             profile = request.user.profile
             profile.bio = p_form.cleaned_data.get('bio')
             profile.location = p_form.cleaned_data.get('location')
-
-            if 'avatar' in request.FILES:
-                profile.avatar = request.FILES['avatar']
 
             profile.save()
 
