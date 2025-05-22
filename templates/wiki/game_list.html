@@ -1,0 +1,67 @@
+{% extends 'base.html' %} {% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Filters</h5>
+                <p class="card-text">[Filter options will go here]</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h4>Games List</h4>
+                <ul id="games-list" class="list-group"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        fetch("/wiki/api/v1/games")
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                const gamesList = document.getElementById("games-list");
+                data.forEach(function (game) {
+                    const shortDesc =
+                        game.short_description.length > 100
+                            ? game.short_description.substring(0, 97) + "..."
+                            : game.short_description;
+
+                    // Generate random upvote/downvote ratio
+                    const upvotes = Math.floor(Math.random() * 1000) + 1;
+                    const downvotes = Math.floor(Math.random() * 300) + 1;
+
+                    const gameItem = `
+                      <li class="list-group-item">
+                          <div>
+                              <h5>${game.title}</h5>
+                              <p>${shortDesc}</p>
+                          </div>
+                          <div class="d-flex justify-content-between align-items-center mt-2">
+                              <div class="vote-ratio">
+                              <small class="text-muted"><i class="fas fa-arrow-up"></i> ${upvotes} <i class="fas fa-arrow-down"></i> ${downvotes} (${Math.round((upvotes / (upvotes + downvotes)) * 100)}% positive)</small>
+                              </div>
+                              <div>
+                                  <button class="btn btn-primary btn-sm">View Details</button>
+                              </div>
+                          </div>
+                      </li>
+                `;
+                    gamesList.innerHTML += gameItem;
+                });
+            })
+            .catch((error) => {
+                console.error("Failed to fetch games data:", error);
+            });
+    });
+</script>
+{% endblock %} {% block title %}Game Wiki | Massive Game Archive{% endblock %}

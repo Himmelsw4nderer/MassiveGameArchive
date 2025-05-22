@@ -1,0 +1,30 @@
+{
+    "language_overrides": {
+        "HTML": {
+            "format_on_save": false,
+            "formatter": {
+                "external": {
+                    "command": "none"
+                }
+            }
+        }
+    },
+    "lsp": {
+        "html": {
+            "format_on_save": false
+        }
+    },
+    "format_on_save": "true",
+    "format_on_paste": false,
+    "formatter": {
+        "html": {
+            "command": "none"
+        }
+    },
+    "default_formatter": {
+        "html": null
+    },
+    "file_types": {
+        "*.html": ["HTML"]
+    }
+}

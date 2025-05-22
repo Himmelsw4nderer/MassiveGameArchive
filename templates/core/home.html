@@ -7,7 +7,12 @@
             Your comprehensive resource for large group games perfect for youth
             groups, camps, and team-building events.
         </p>
-        <button class="btn btn-primary btn-lg" type="button">Find Games</button>
+        <a
+            class="btn btn-primary btn-lg"
+            href="{% url 'game_list' %}"
+        >
+            Find Games
+        </a>
     </div>
 </div>
 {% endblock %}

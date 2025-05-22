@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('users/', include('users.urls')),
+    path('wiki/', include('wiki.urls')),
 ]
 
 # Media URLs configuration is kept for other functionality, but avatar feature is removed
