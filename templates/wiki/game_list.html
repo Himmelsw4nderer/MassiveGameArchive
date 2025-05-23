@@ -66,7 +66,6 @@
             gamesList.innerHTML += gameItem;
         });
 
-        // After adding all games to the DOM, create radar charts for each
         data.forEach(function (game, index) {
             createRadarChart(game, index);
         });
@@ -119,12 +118,10 @@
     }
 
     function createRadarChart(game, index) {
-        // Generate random metrics data (in a real app, this would come from the game data)
-        const metrics = generateGameMetrics();
-
         const ctx = document
             .getElementById(`radar-chart-${index}`)
             .getContext("2d");
+
         new Chart(ctx, {
             type: "radar",
             data: {
@@ -139,11 +136,11 @@
                     {
                         label: "Game Metrics",
                         data: [
-                            metrics.difficultyComplexity,
-                            metrics.preparationTime,
-                            metrics.physicalIntensity,
-                            metrics.duration,
-                            metrics.groupSizeFlexibility,
+                            game.difficulty_index,
+                            game.preperation_index,
+                            game.physical_index,
+                            game.duration_index,
+                            game.group_size_index,
                         ],
                         fill: true,
                         backgroundColor: "rgba(54, 162, 235, 0.2)",

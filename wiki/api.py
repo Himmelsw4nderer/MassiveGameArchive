@@ -13,6 +13,11 @@ class GameSchema(Schema):
     title: str
     short_description: str
     slug: str
+    difficulty_index: int
+    group_size_index: int
+    preperation_index: int
+    physical_index: int
+    duration_index: int
 
 
 class ErrorResponseSchema(Schema):
@@ -37,6 +42,11 @@ def list_games(request: HttpRequest, start_index: int = 0, amount: int = 20):
             id=game.id,
             title=game.title,
             short_description=game.short_description,
-            slug=game.slug
+            slug=game.slug,
+            difficulty_index=game.difficulty_index,
+            group_size_index=game.group_size_index,
+            preperation_index=game.preperation_index,
+            physical_index=game.physical_index,
+            duration_index=game.duration_index
         ) for game in games
     ]
