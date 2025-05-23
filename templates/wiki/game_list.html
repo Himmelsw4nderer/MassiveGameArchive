@@ -41,6 +41,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", initializeGamesList);
+    window.addEventListener("resize", updateDescriptions);
 
     function initializeGamesList() {
         fetchGamesData()
@@ -61,12 +62,30 @@
 
     function displayGames(data) {
         const gamesList = document.getElementById("games-list");
+        window.gamesData = data;
+
         data.forEach(function (game, index) {
             const gameItem = createGameItem(game, index);
             gamesList.innerHTML += gameItem;
         });
 
         data.forEach(function (game, index) {
+            createRadarChart(game, index);
+        });
+    }
+
+    function updateDescriptions() {
+        if (!window.gamesData) return;
+
+        const gamesList = document.getElementById("games-list");
+        gamesList.innerHTML = "";
+
+        window.gamesData.forEach(function (game, index) {
+            const gameItem = createGameItem(game, index);
+            gamesList.innerHTML += gameItem;
+        });
+
+        window.gamesData.forEach(function (game, index) {
             createRadarChart(game, index);
         });
     }
@@ -97,11 +116,11 @@
 
                 </div>
 
-                <div class="col-xl-4 col-lg-6 order-md-2 order-2 mb-3 mb-md-0">
+                <div class="col-xl-4 col-lg-6 order-2 mb-3 mb-md-0">
                     <canvas id="radar-chart-${index}" width="150" height="125"></canvas>
                 </div>
 
-                <div class="col-xl-8 col-lg-6 order-md-3 order-3 mt-2 mt-md-0">
+                <div class="col-xl-8 col-lg-6 order-3 mt-2 mt-md-0">
                     <div class="vote-ratio">
                         <small class="text-muted">
                             <i class="fas fa-arrow-up"></i> ${voteData.upvotes}
@@ -195,8 +214,23 @@
     }
 
     function truncateDescription(description) {
-        return description.length > 100
-            ? description.substring(0, 97) + "..."
+        const viewportWidth = window.innerWidth;
+        let maxLength;
+
+        if (viewportWidth <= 576) {
+            maxLength = 80;
+        } else if (viewportWidth <= 768) {
+            maxLength = 80;
+        } else if (viewportWidth <= 992) {
+            maxLength = 130;
+        } else if (viewportWidth <= 1200) {
+            maxLength = 140;
+        } else {
+            maxLength = 190;
+        }
+
+        return description.length > maxLength
+            ? description.substring(0, maxLength - 3) + "..."
             : description;
     }
 
