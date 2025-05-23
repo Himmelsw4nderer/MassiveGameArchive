@@ -7,7 +7,6 @@ from django.http import JsonResponse
 
 
 api = NinjaAPI(urls_namespace="wiki_api")
-
 class GameSchema(Schema):
     title: str
     short_description: str
@@ -19,6 +18,8 @@ class GameSchema(Schema):
     duration_index: int
     tags: List[str]
     age_groups: List[str]
+    upvote_count: int
+    downvote_count: int
 
 
 class ErrorResponseSchema(Schema):
@@ -48,7 +49,9 @@ def list_games(request: HttpRequest, start_index: int = 0, amount: int = 20):
             preperation_index=game.preperation_index,
             physical_index=game.physical_index,
             duration_index=game.duration_index,
-            tags=[tag.name for tag in game.tags.all()],
-            age_groups=[age_group.string_title for age_group in game.age_groups.all()]
+            tags=game.get_tags(),
+            age_groups=game.get_age_groups(),
+            upvote_count=game.get_upvote_count(),
+            downvote_count=game.get_downvote_count(),
         ) for game in games
     ]

@@ -92,7 +92,7 @@
 
     function generateTagsBadges(tags) {
         return tags
-            .map((tag) => `<span class="badge bg-secondary me-1">${tag}</span>`)
+            .map((tag) => `<span class="badge bg-primary me-1">${tag}</span>`)
             .join("");
     }
 
@@ -104,15 +104,15 @@
 
     function createGameItem(game, index) {
         const shortDesc = truncateDescription(game.short_description);
-        const voteData = generateRandomVotes();
-        const badgeClass = getVoteBadgeClass(
-            voteData.upvotes,
-            voteData.downvotes,
-        );
+
         const positivePercentage = calculatePositivePercentage(
-            voteData.upvotes,
-            voteData.downvotes,
+            game.upvote_count,
+            game.downvote_count,
         );
+        const badgeClass = getVoteBadgeClass(positivePercentage);
+        const positivePercentageDisplay = isNaN(positivePercentage)
+            ? "No Votes"
+            : `${positivePercentage}% Positive`;
 
         const tagsHtml = generateTagsBadges(game.tags);
         const ageGroupsHtml = generateAgeGroupBadges(game.age_groups);
@@ -137,10 +137,10 @@
                 <div class="col-xl-8 col-lg-6 order-3 mt-2 mt-md-0">
                     <div class="vote-ratio">
                         <small class="text-muted">
-                            <i class="fas fa-arrow-up"></i> ${voteData.upvotes}
-                            <i class="fas fa-arrow-down"></i> ${voteData.downvotes}
+                            <i class="fas fa-arrow-up"></i> ${game.upvote_count}
+                            <i class="fas fa-arrow-down"></i> ${game.downvote_count}
                             <span class="badge ${badgeClass} ms-1">
-                                ${positivePercentage}% positive
+                                ${positivePercentageDisplay}
                             </span>
                         </small>
                     </div>
@@ -217,16 +217,6 @@
         });
     }
 
-    function generateGameMetrics() {
-        return {
-            difficultyComplexity: Math.floor(Math.random() * 10) + 1,
-            preparationTime: Math.floor(Math.random() * 10) + 1,
-            physicalIntensity: Math.floor(Math.random() * 10) + 1,
-            duration: Math.floor(Math.random() * 10) + 1,
-            groupSizeFlexibility: Math.floor(Math.random() * 10) + 1,
-        };
-    }
-
     function truncateDescription(description) {
         const viewportWidth = window.innerWidth;
         let maxLength;
@@ -248,26 +238,19 @@
             : description;
     }
 
-    function generateRandomVotes() {
-        return {
-            upvotes: Math.floor(Math.random() * 1000) + 1,
-            downvotes: Math.floor(Math.random() * 300) + 1,
-        };
-    }
-
     function calculatePositivePercentage(upvotes, downvotes) {
         return Math.round((upvotes / (upvotes + downvotes)) * 100);
     }
 
-    function getVoteBadgeClass(upvotes, downvotes) {
-        const percentage = calculatePositivePercentage(upvotes, downvotes);
-
+    function getVoteBadgeClass(percentage) {
         if (percentage > 75) {
             return "bg-success";
         } else if (percentage > 50) {
             return "bg-warning";
-        } else {
+        } else if (percentage <= 50) {
             return "bg-danger";
+        } else {
+            return "bg-secondary";
         }
     }
 </script>
