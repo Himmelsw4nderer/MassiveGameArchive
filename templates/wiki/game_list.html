@@ -11,7 +11,7 @@
 
     <div class="col-md-8">
         <ul id="games-list" class="list-group"></ul>
-        <li
+        <div
             class="list-group-item d-flex justify-content-between align-items-center mt-3"
         >
             <button id="load-more-btn" class="btn btn-outline-primary">
@@ -35,7 +35,7 @@
                     </ul>
                 </nav>
             </div>
-        </li>
+        </div>
     </div>
 </div>
 
@@ -51,33 +51,43 @@
     }
 
     function fetchGamesData() {
-        return fetch("/wiki/api/v1/games")
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                }
-                return response.json();
-            });
+        return fetch("/wiki/api/v1/games").then((response) => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        });
     }
 
     function displayGames(data) {
         const gamesList = document.getElementById("games-list");
-        data.forEach(function (game) {
-            const gameItem = createGameItem(game);
+        data.forEach(function (game, index) {
+            const gameItem = createGameItem(game, index);
             gamesList.innerHTML += gameItem;
+        });
+
+        // After adding all games to the DOM, create radar charts for each
+        data.forEach(function (game, index) {
+            createRadarChart(game, index);
         });
     }
 
-    function createGameItem(game) {
+    function createGameItem(game, index) {
         const shortDesc = truncateDescription(game.short_description);
         const voteData = generateRandomVotes();
-        const badgeClass = getVoteBadgeClass(voteData.upvotes, voteData.downvotes);
-        const positivePercentage = calculatePositivePercentage(voteData.upvotes, voteData.downvotes);
+        const badgeClass = getVoteBadgeClass(
+            voteData.upvotes,
+            voteData.downvotes,
+        );
+        const positivePercentage = calculatePositivePercentage(
+            voteData.upvotes,
+            voteData.downvotes,
+        );
 
         return `
         <li class="list-group-item" onclick="window.location='/wiki/games/${game.id}'" style="cursor: pointer;">
             <div class="row">
-                <div class="col-md-8">
+                <div class="col-xl-8 col-lg-6 order-md-1 order-1">
                     <h5>${game.title}</h5>
                     <div class="mb-2">
                         <span class="badge bg-secondary me-1">Tag1</span>
@@ -85,24 +95,107 @@
                         <span class="badge bg-info me-1">Age 12+</span>
                     </div>
                     <p>${shortDesc}</p>
+
                 </div>
-                <div class="col-md-4 text-end">
+
+                <div class="col-xl-4 col-lg-6 order-md-2 order-2 mb-3 mb-md-0">
+                    <canvas id="radar-chart-${index}" width="150" height="125"></canvas>
+                </div>
+
+                <div class="col-xl-8 col-lg-6 order-md-3 order-3 mt-2 mt-md-0">
                     <div class="vote-ratio">
-                    <small class="text-muted p-2">
-                      <i class="fas fa-arrow-up"></i> ${voteData.upvotes}
-                      <i class="fas fa-arrow-down"></i> ${voteData.downvotes}
-                    </small>
-                    <div class="mt-1">
-                        <span class="badge ${badgeClass} me-1">
-                          ${positivePercentage}% positive
-                        </span>
+                        <small class="text-muted">
+                            <i class="fas fa-arrow-up"></i> ${voteData.upvotes}
+                            <i class="fas fa-arrow-down"></i> ${voteData.downvotes}
+                            <span class="badge ${badgeClass} ms-1">
+                                ${positivePercentage}% positive
+                            </span>
+                        </small>
                     </div>
-                    </div>
-                  </div>
+                </div>
             </div>
         </li>
-      `;
-  }
+          `;
+    }
+
+    function createRadarChart(game, index) {
+        // Generate random metrics data (in a real app, this would come from the game data)
+        const metrics = generateGameMetrics();
+
+        const ctx = document
+            .getElementById(`radar-chart-${index}`)
+            .getContext("2d");
+        new Chart(ctx, {
+            type: "radar",
+            data: {
+                labels: [
+                    "Difficulty",
+                    "Preperation",
+                    "Physical",
+                    "Duration",
+                    "Group Size",
+                ],
+                datasets: [
+                    {
+                        label: "Game Metrics",
+                        data: [
+                            metrics.difficultyComplexity,
+                            metrics.preparationTime,
+                            metrics.physicalIntensity,
+                            metrics.duration,
+                            metrics.groupSizeFlexibility,
+                        ],
+                        fill: true,
+                        backgroundColor: "rgba(54, 162, 235, 0.2)",
+                        borderColor: "rgb(54, 162, 235)",
+                        pointBackgroundColor: "rgb(54, 162, 235)",
+                        pointBorderColor: "#fff",
+                        pointHoverBackgroundColor: "#fff",
+                        pointHoverBorderColor: "rgb(54, 162, 235)",
+                    },
+                ],
+            },
+            options: {
+                elements: {
+                    line: {
+                        borderWidth: 1,
+                    },
+                },
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true,
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 10,
+                        ticks: {
+                            display: false,
+                            stepSize: 2,
+                        },
+                    },
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        enabled: true,
+                    },
+                },
+                maintainAspectRatio: false,
+            },
+        });
+    }
+
+    function generateGameMetrics() {
+        return {
+            difficultyComplexity: Math.floor(Math.random() * 10) + 1,
+            preparationTime: Math.floor(Math.random() * 10) + 1,
+            physicalIntensity: Math.floor(Math.random() * 10) + 1,
+            duration: Math.floor(Math.random() * 10) + 1,
+            groupSizeFlexibility: Math.floor(Math.random() * 10) + 1,
+        };
+    }
 
     function truncateDescription(description) {
         return description.length > 100
@@ -113,7 +206,7 @@
     function generateRandomVotes() {
         return {
             upvotes: Math.floor(Math.random() * 1000) + 1,
-            downvotes: Math.floor(Math.random() * 300) + 1
+            downvotes: Math.floor(Math.random() * 300) + 1,
         };
     }
 
@@ -132,6 +225,5 @@
             return "bg-danger";
         }
     }
-</script>
 </script>
 {% endblock %} {% block title %}Game Wiki | Massive Game Archive{% endblock %}
