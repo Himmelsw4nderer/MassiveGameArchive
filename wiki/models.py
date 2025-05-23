@@ -17,6 +17,8 @@ class Game(models.Model):
     preperation_index = models.IntegerField(choices=[(i, i) for i in range(1, 11)], default=5)
     physical_index = models.IntegerField(choices=[(i, i) for i in range(1, 11)], default=5)
     duration_index = models.IntegerField(choices=[(i, i) for i in range(1, 11)], default=5)
+    tags = models.ManyToManyField('Tag', related_name='games', blank=True)
+    age_groups = models.ManyToManyField('AgeGroup', related_name='games', blank=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -28,3 +30,18 @@ class Game(models.Model):
 
     def get_absolute_url(self):
         return reverse('game_detail', kwargs={'slug': self.slug})
+
+class Tag(models.Model):
+    name = models.CharField(max_length=25, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class AgeGroup(models.Model):
+    string_title = models.CharField(max_length=25, unique=True)
+    minimum_age = models.IntegerField()
+    maximum_age = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.string_title} ({self.minimum_age}-{self.maximum_age})"

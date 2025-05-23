@@ -9,7 +9,6 @@ from django.http import JsonResponse
 api = NinjaAPI(urls_namespace="wiki_api")
 
 class GameSchema(Schema):
-    id: int
     title: str
     short_description: str
     slug: str
@@ -18,6 +17,8 @@ class GameSchema(Schema):
     preperation_index: int
     physical_index: int
     duration_index: int
+    tags: List[str]
+    age_groups: List[str]
 
 
 class ErrorResponseSchema(Schema):
@@ -31,7 +32,7 @@ def list_games(request: HttpRequest, start_index: int = 0, amount: int = 20):
 
     if amount > 50:
         return JsonResponse(
-            ErrorResponseSchema("Amount exceeds maximum limit of 50 games per request"),
+            ErrorResponseSchema(error="Amount exceeds maximum limit of 50 games per request"),
             status=400
         )
 
@@ -39,7 +40,6 @@ def list_games(request: HttpRequest, start_index: int = 0, amount: int = 20):
     games = Game.objects.all()[start_index:end_index]
     return [
         GameSchema(
-            id=game.id,
             title=game.title,
             short_description=game.short_description,
             slug=game.slug,
@@ -47,6 +47,8 @@ def list_games(request: HttpRequest, start_index: int = 0, amount: int = 20):
             group_size_index=game.group_size_index,
             preperation_index=game.preperation_index,
             physical_index=game.physical_index,
-            duration_index=game.duration_index
+            duration_index=game.duration_index,
+            tags=[tag.name for tag in game.tags.all()],
+            age_groups=[age_group.string_title for age_group in game.age_groups.all()]
         ) for game in games
     ]

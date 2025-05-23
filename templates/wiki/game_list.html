@@ -90,6 +90,18 @@
         });
     }
 
+    function generateTagsBadges(tags) {
+        return tags
+            .map((tag) => `<span class="badge bg-secondary me-1">${tag}</span>`)
+            .join("");
+    }
+
+    function generateAgeGroupBadges(ageGroups) {
+        return ageGroups
+            .map((age) => `<span class="badge bg-info me-1">${age}</span>`)
+            .join("");
+    }
+
     function createGameItem(game, index) {
         const shortDesc = truncateDescription(game.short_description);
         const voteData = generateRandomVotes();
@@ -102,15 +114,17 @@
             voteData.downvotes,
         );
 
+        const tagsHtml = generateTagsBadges(game.tags);
+        const ageGroupsHtml = generateAgeGroupBadges(game.age_groups);
+
         return `
         <li class="list-group-item" onclick="window.location='/wiki/games/${game.id}'" style="cursor: pointer;">
             <div class="row">
                 <div class="col-xl-8 col-lg-6 order-md-1 order-1">
                     <h5>${game.title}</h5>
                     <div class="mb-2">
-                        <span class="badge bg-secondary me-1">Tag1</span>
-                        <span class="badge bg-secondary me-1">Tag2</span>
-                        <span class="badge bg-info me-1">Age 12+</span>
+                        ${tagsHtml}
+                        ${ageGroupsHtml}
                     </div>
                     <p>${shortDesc}</p>
 
