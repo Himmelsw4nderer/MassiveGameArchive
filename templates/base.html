@@ -1,3 +1,5 @@
+{% load static %}
+
 <!doctype html>
 <html lang="en">
     <head>
@@ -27,6 +29,18 @@
             integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
             crossorigin="anonymous"
             referrerpolicy="no-referrer"
+        />
+
+        <!-- Favicon -->
+        <link
+            rel="shortcut icon"
+            type="image/ico"
+            href="{% static 'images/favicon.ico' %}"
+        />
+        <link
+            rel="icon"
+            type="image/ico"
+            href="{% static 'images/favicon.ico' %}"
         />
 
         <style>
