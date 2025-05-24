@@ -273,10 +273,8 @@
         document
             .getElementById("applyFilters")
             .addEventListener("click", function () {
-                // Clear the games list before applying new filters
                 document.getElementById("games-list").innerHTML = "";
 
-                // Fetch and display games with the applied filters
                 fetchGamesWithFilters()
                     .then(displayGames)
                     .catch((error) => {
@@ -287,11 +285,9 @@
                     });
             });
 
-        // Also add event listener to search button
         document
             .getElementById("searchButton")
             .addEventListener("click", function () {
-                // Clear the games list before searching
                 document.getElementById("games-list").innerHTML = "";
 
                 fetchGamesWithFilters()
@@ -299,6 +295,24 @@
                     .catch((error) => {
                         console.error("Failed to search games data:", error);
                     });
+            });
+
+        document
+            .getElementById("gameSearch")
+            .addEventListener("keypress", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    document.getElementById("games-list").innerHTML = "";
+
+                    fetchGamesWithFilters()
+                        .then(displayGames)
+                        .catch((error) => {
+                            console.error(
+                                "Failed to search games data:",
+                                error,
+                            );
+                        });
+                }
             });
     });
     window.addEventListener("resize", updateDescriptions);
@@ -385,13 +399,12 @@
             .getElementById("groupSizeRange")
             .noUiSlider.get();
 
-        // Search term
         const searchTerm = document.getElementById("gameSearch").value;
 
-        // Build query params
+        currentPage = 0;
+
         let params = new URLSearchParams();
 
-        // Add filters if they exist
         if (tagFilters.length > 0) {
             tagFilters.forEach((tag) => params.append("tag_filter", tag));
         }
@@ -402,7 +415,6 @@
             );
         }
 
-        // Add range filters
         params.append("min_difficulty_index", Math.round(difficultyValues[0]));
         params.append("max_difficulty_index", Math.round(difficultyValues[1]));
 
@@ -424,16 +436,14 @@
         params.append("min_group_size_index", Math.round(groupSizeValues[0]));
         params.append("max_group_size_index", Math.round(groupSizeValues[1]));
 
-        // Add search term if it exists
         if (searchTerm) {
-            params.append("search", searchTerm);
+            params.append("q", searchTerm);
+            lastSearchTerm = searchTerm;
         }
 
-        // Default pagination params
         params.append("start_index", 0);
         params.append("amount", 20);
 
-        // Make the fetch request with filters
         return fetch(`/wiki/api/v1/games?${params.toString()}`).then(
             (response) => {
                 if (!response.ok) {

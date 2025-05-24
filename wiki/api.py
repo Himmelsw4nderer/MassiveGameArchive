@@ -1,10 +1,35 @@
 # MassiveGameArchive/wiki/api.py
+"""
+API endpoints for the Wiki app.
+
+This module provides the API endpoints for the Wiki app, including:
+- Game listing with advanced search and filtering capabilities
+- Support for PostgreSQL full-text search when available
+- Multi-field search with query term parsing
+- Customizable search fields and sorting options
+
+Search functionality:
+- Use 'q' parameter for search queries (e.g., ?q=fun outdoor game)
+- Control which fields to search with 'search_in' parameter (options: 'title', 'description', 'content', 'all')
+- Sort results with 'sort_by' parameter (options: 'relevance', 'title', 'newest', 'upvotes')
+- When using PostgreSQL, full-text search is automatically used for better relevance ranking
+"""
+
 from typing_extensions import Optional
 from django.http import HttpRequest
 from ninja import NinjaAPI, Schema, Query
 from typing import List
 from .models import Game
 from django.http import JsonResponse
+from django.db.models import Q, Count, Case, When, IntegerField
+from django.db import connection
+
+# For PostgreSQL full-text search
+try:
+    from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+    HAS_POSTGRES_SEARCH = True
+except ImportError:
+    HAS_POSTGRES_SEARCH = False
 
 
 api = NinjaAPI(urls_namespace="wiki_api")
@@ -30,12 +55,14 @@ class ErrorResponseSchema(Schema):
     "/games",
     response={200: List[GameSchema], 400: ErrorResponseSchema},
     summary="Get a list of games",
-    description="Returns a paginated list of games with optional filtering options."
+    description="Returns a paginated list of games with optional filtering and search options."
 )
 def list_games(
     request: HttpRequest,
     start_index: int = Query(0, description="Starting index for pagination (0-based)"),
     amount: int = Query(20, description="Number of games to return per page (max 50)"),
+    q: str = Query("", description="Search query for finding games by title, description, and content"),
+    search_in: List[str] = Query(["all"], description="Fields to search in: 'title', 'description', 'content', or 'all'"),
     tag_filter: List[str] = Query([], description="List of tags to filter games by"),
     age_group_filter: List[str] = Query([], description="List of age groups to filter games by"),
     min_difficulty_index: int = Query(0, description="Minimum difficulty level (1-10)"),
@@ -48,6 +75,7 @@ def list_games(
     max_physical_index: int = Query(10, description="Maximum physical activity level (1-10)"),
     min_duration_index: int = Query(0, description="Minimum game duration level (1-10)"),
     max_duration_index: int = Query(10, description="Maximum game duration level (1-10)"),
+    sort_by: str = Query("relevance", description="Sort results by: 'relevance', 'title', 'newest', 'upvotes'"),
 ):
     start_index = int(start_index)
     amount = int(amount)
@@ -59,6 +87,43 @@ def list_games(
         )
 
     games_queryset = Game.objects.all()
+
+    # Enhanced search functionality
+    if q:
+        # PostgreSQL full-text search (if available and PostgreSQL is being used)
+        if HAS_POSTGRES_SEARCH and connection.vendor == 'postgresql':
+            search_vector = SearchVector('title', weight='A') + \
+                           SearchVector('short_description', weight='B') + \
+                           SearchVector('markdown_content', weight='C')
+            search_query = SearchQuery(q)
+            games_queryset = games_queryset.annotate(
+                search=search_vector,
+                rank=SearchRank(search_vector, search_query)
+            ).filter(search=search_query).order_by('-rank')
+        else:
+            # Standard search with improved multi-term handling
+            search_query = Q()
+            
+            # Determine which fields to search based on search_in parameter
+            fields_to_search = []
+            if "all" in search_in or not search_in:
+                fields_to_search = ["title", "short_description", "markdown_content"]
+            else:
+                if "title" in search_in:
+                    fields_to_search.append("title")
+                if "description" in search_in:
+                    fields_to_search.append("short_description")  
+                if "content" in search_in:
+                    fields_to_search.append("markdown_content")
+            
+            # Build query for each search term
+            for term in q.split():
+                term_query = Q()
+                for field in fields_to_search:
+                    term_query |= Q(**{f"{field}__icontains": term})
+                search_query &= term_query
+            
+            games_queryset = games_queryset.filter(search_query)
 
     if tag_filter:
         for tag in tag_filter:
@@ -80,6 +145,24 @@ def list_games(
         duration_index__gte=min_duration_index,
         duration_index__lte=max_duration_index,
     )
+
+    # Apply sorting
+    if sort_by == "title":
+        games_queryset = games_queryset.order_by("title")
+    elif sort_by == "newest":
+        games_queryset = games_queryset.order_by("-id")  # Assuming newer games have higher IDs
+    elif sort_by == "upvotes":
+        # Annotate with upvote counts and sort
+        games_queryset = games_queryset.annotate(
+            upvote_count=Count(
+                Case(
+                    When(votes__value=1, then=1),
+                    output_field=IntegerField()
+                )
+            )
+        ).order_by("-upvote_count")
+    # Default is relevance, which is handled by the search function
+    # or left as-is for no search
 
     end_index = start_index + amount
     games = games_queryset[start_index:end_index]
