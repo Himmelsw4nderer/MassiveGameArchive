@@ -1,10 +1,251 @@
 {% extends 'base.html' %} {% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search games..." id="gameSearch">
+            <button class="btn btn-primary" type="button" id="searchButton">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+    </div>
+</div>
 <div class="row">
     <div class="col-md-4">
         <div class="card mb-3">
             <div class="card-body">
                 <h5 class="card-title">Filters</h5>
-                <p class="card-text">[Filter options will go here]</p>
+                <div class="filter-section">
+                    <h6
+                        class="filter-heading"
+                        data-bs-toggle="collapse"
+                        href="#tagCollapse"
+                        role="button"
+                    >
+                        <i class="fas fa-chevron-down me-1"></i> Game Tags
+                    </h6>
+                    <div class="collapse show" id="tagCollapse">
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="outdoor"
+                                        id="tagOutdoor"
+                                    />
+                                    <label class="form-check-label" for="tagOutdoor">Outdoor</label>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">42</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="indoor"
+                                        id="tagIndoor"
+                                    />
+                                    <label class="form-check-label" for="tagIndoor">Indoor</label></label>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">65</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="cooperative"
+                                        id="tagCooperative"
+                                    />
+                                    <label class="form-check-label" for="tagCooperative">Cooperative</label>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">28</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="competitive"
+                                        id="tagCompetitive"
+                                    />
+                                    <label class="form-check-label" for="tagCompetitive">Competitive</label>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">53</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="party"
+                                        id="tagParty"
+                                    />
+                                    <label class="form-check-label" for="tagParty"></label>Party Game</label>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">37</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="filter-section mt-3">
+                    <h6
+                        class="filter-heading"
+                        data-bs-toggle="collapse"
+                        href="#ageCollapse"
+                        role="button"
+                    >
+                        <i class="fas fa-chevron-down me-1"></i> Age Groups
+                    </h6>
+                    <div class="collapse show" id="ageCollapse">
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="children"
+                                        id="ageChildren"
+                                    />
+                                    <label class="form-check-label" for="ageChildren">Children (5-12)</label>
+                                </div>
+                                <span class="badge bg-info rounded-pill">45</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="teens"
+                                        id="ageTeens"
+                                    />
+                                    <label class="form-check-label" for="ageTeens">Teens (13-17)</label>
+                                </div>
+                                <span class="badge bg-info rounded-pill">72</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="adult"
+                                        id="ageAdult"
+                                    />
+                                    <label class="form-check-label" for="ageAdult"></label>Adults (18+)</label>
+                                </div>
+                                <span class="badge bg-info rounded-pill">89</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="filter-section mt-3">
+                    <h6
+                        class="filter-heading"
+                        data-bs-toggle="collapse"
+                        href="#difficultyCollapse"
+                        role="button"
+                    >
+                        <i class="fas fa-chevron-down me-1"></i> Difficulty
+                        Level
+                    </h6>
+                    <div class="collapse show" id="difficultyCollapse">
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="easy"
+                                        id="difficultyEasy"
+                                    />
+                                    <label class="form-check-label" for="difficultyEasy">Easy (1-3)</label>
+                                </div>
+                                <span class="badge bg-success rounded-pill">63</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="medium"
+                                        id="difficultyMedium"
+                                    />
+                                    <label class="form-check-label" for="difficultyMedium">Medium (4-6)</label>
+                                </div>
+                                <span class="badge bg-warning rounded-pill">47</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="hard"
+                                        id="difficultyHard"
+                                    />
+                                    <label class="form-check-label" for="difficultyHard">Hard (7-10)</label>
+                                </div>
+                                <span class="badge bg-danger rounded-pill">29</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="filter-section mt-3">
+                    <h6
+                        class="filter-heading"
+                        data-bs-toggle="collapse"
+                        href="#durationCollapse"
+                        role="button"
+                    >
+                        <i class="fas fa-chevron-down me-1"></i> Duration
+                    </h6>
+                    <div class="collapse show" id="durationCollapse">
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="short"
+                                        id="durationShort"
+                                    />
+                                    <label class="form-check-label" for="durationShort">Short (< 15 min)</label>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">34</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="medium"
+                                        id="durationMedium"
+                                    />
+                                    <label class="form-check-label" for="durationMedium">Medium (15-30 min)</label>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">58</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        value="long"
+                                        id="durationLong"
+                                    />
+                                    <label class="form-check-label" for="durationLong">Long (> 30 min)</label>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">41</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary w-100 mt-3">
+                    Apply Filters
+                </button>
             </div>
         </div>
     </div>
