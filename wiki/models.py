@@ -62,6 +62,11 @@ class Tag(models.Model):
     def __str__(self):
         return self.name
 
+    @classmethod
+    def get_all_tags(cls):
+        tags = cls.objects.all()
+        return [str(tag) for tag in tags]
+
 
 class AgeGroup(models.Model):
     string_title = models.CharField(max_length=25, unique=True)
@@ -71,6 +76,10 @@ class AgeGroup(models.Model):
     def __str__(self):
         return f"{self.string_title} ({self.minimum_age}-{self.maximum_age})"
 
+    @classmethod
+    def get_all_age_groups(cls):
+        age_groups = cls.objects.all()
+        return [str(age_group) for age_group in age_groups]
 class Vote(models.Model):
     VOTE_CHOICES = (
         (1, 'Upvote'),
