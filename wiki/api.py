@@ -4,32 +4,19 @@ API endpoints for the Wiki app.
 
 This module provides the API endpoints for the Wiki app, including:
 - Game listing with advanced search and filtering capabilities
-- Support for PostgreSQL full-text search when available
-- Multi-field search with query term parsing
 - Customizable search fields and sorting options
 
 Search functionality:
 - Use 'q' parameter for search queries (e.g., ?q=fun outdoor game)
 - Control which fields to search with 'search_in' parameter (options: 'title', 'description', 'content', 'all')
 - Sort results with 'sort_by' parameter (options: 'relevance', 'title', 'newest', 'upvotes')
-- When using PostgreSQL, full-text search is automatically used for better relevance ranking
+- Advanced search is implemented in the services module for better code organization
 """
 
-from typing_extensions import Optional
-from django.http import HttpRequest
+from django.http import HttpRequest, JsonResponse
 from ninja import NinjaAPI, Schema, Query
 from typing import List
-from .models import Game
-from django.http import JsonResponse
-from django.db.models import Q, Count, Case, When, IntegerField
-from django.db import connection
-
-# For PostgreSQL full-text search
-try:
-    from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
-    HAS_POSTGRES_SEARCH = True
-except ImportError:
-    HAS_POSTGRES_SEARCH = False
+from .services import search_games, get_paginated_games
 
 
 api = NinjaAPI(urls_namespace="wiki_api")
@@ -86,77 +73,27 @@ def list_games(
             status=400
         )
 
-    games_queryset = Game.objects.all()
-
-    if q:
-        if HAS_POSTGRES_SEARCH and connection.vendor == 'postgresql':
-            search_vector = SearchVector('title', weight='A') + \
-                           SearchVector('short_description', weight='B') + \
-                           SearchVector('markdown_content', weight='C')
-            search_query = SearchQuery(q)
-            games_queryset = games_queryset.annotate(
-                search=search_vector,
-                rank=SearchRank(search_vector, search_query)
-            ).filter(search=search_query).order_by('-rank')
-        else:
-            search_query = Q()
-
-            fields_to_search = []
-            if "all" in search_in or not search_in:
-                fields_to_search = ["title", "short_description", "markdown_content"]
-            else:
-                if "title" in search_in:
-                    fields_to_search.append("title")
-                if "description" in search_in:
-                    fields_to_search.append("short_description")
-                if "content" in search_in:
-                    fields_to_search.append("markdown_content")
-
-            for term in q.split():
-                term_query = Q()
-                for field in fields_to_search:
-                    term_query |= Q(**{f"{field}__icontains": term})
-                search_query &= term_query
-
-            games_queryset = games_queryset.filter(search_query)
-
-    if tag_filter:
-        for tag in tag_filter:
-            games_queryset = games_queryset.filter(tags__name=tag)
-
-    if age_group_filter:
-        for age_group in age_group_filter:
-            games_queryset = games_queryset.filter(age_groups__name=age_group)
-
-    games_queryset = games_queryset.filter(
-        difficulty_index__gte=min_difficulty_index,
-        difficulty_index__lte=max_difficulty_index,
-        group_size_index__gte=min_group_size_index,
-        group_size_index__lte=max_group_size_index,
-        preperation_index__gte=min_preperation_index,
-        preperation_index__lte=max_preperation_index,
-        physical_index__gte=min_physical_index,
-        physical_index__lte=max_physical_index,
-        duration_index__gte=min_duration_index,
-        duration_index__lte=max_duration_index,
+    # Use the search service to get filtered games
+    games_queryset = search_games(
+        query=q,
+        search_in=search_in,
+        tag_filter=tag_filter,
+        age_group_filter=age_group_filter,
+        min_difficulty_index=min_difficulty_index,
+        max_difficulty_index=max_difficulty_index,
+        min_group_size_index=min_group_size_index,
+        max_group_size_index=max_group_size_index,
+        min_preperation_index=min_preperation_index,
+        max_preperation_index=max_preperation_index,
+        min_physical_index=min_physical_index,
+        max_physical_index=max_physical_index,
+        min_duration_index=min_duration_index,
+        max_duration_index=max_duration_index,
+        sort_by=sort_by
     )
 
-    if sort_by == "title":
-        games_queryset = games_queryset.order_by("title")
-    elif sort_by == "newest":
-        games_queryset = games_queryset.order_by("-created_at")
-    elif sort_by == "upvotes":
-        games_queryset = games_queryset.annotate(
-            upvote_count=Count(
-                Case(
-                    When(votes__value=1, then=1),
-                    output_field=IntegerField()
-                )
-            )
-        ).order_by("-upvote_count")
-
-    end_index = start_index + amount
-    games = games_queryset[start_index:end_index]
+    # Get paginated results
+    games = get_paginated_games(games_queryset, start_index, amount)
 
     return [
         GameSchema(
