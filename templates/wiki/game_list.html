@@ -264,26 +264,19 @@
     <div class="col-md-8">
         <ul id="games-list" class="list-group"></ul>
         <div
+            id="pagination-container"
             class="list-group-item d-flex justify-content-between align-items-center mt-3"
         >
-            <button id="load-more-btn" class="btn btn-outline-primary">
-                Load More
-            </button>
+            <div>
+                <button id="load-more-btn" class="btn btn-outline-primary">
+                    Load More
+                </button>
+                <span id="pagination-info" class="ms-3 text-muted"></span>
+            </div>
             <div class="pagination">
                 <nav aria-label="Page navigation">
-                    <ul class="pagination mb-0">
-                        <li class="page-item">
-                            <a class="page-link" href="#">1</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="#">2</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="#">3</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="#">Next</a>
-                        </li>
+                    <ul id="pagination-controls" class="pagination mb-0">
+                        <!-- Pagination controls will be inserted here dynamically -->
                     </ul>
                 </nav>
             </div>
@@ -292,9 +285,20 @@
 </div>
 
 <script>
+    // Global variables for pagination
+    let currentPage = 0;
+    let lastSearchTerm = "";
+
     document.addEventListener("DOMContentLoaded", function () {
         initializeSliders();
         initializeGamesList();
+
+        // Setup Load More button
+        document
+            .getElementById("load-more-btn")
+            .addEventListener("click", function () {
+                fetchGamesWithFilters(currentPage + 1).then(displayGames);
+            });
 
         document
             .getElementById("applyFilters")
@@ -405,7 +409,7 @@
         return Array.from(checkboxes).map((checkbox) => checkbox.value);
     }
 
-    function fetchGamesWithFilters() {
+    function fetchGamesWithFilters(page = 0) {
         const tagFilters = getSelectedValues(".tag-filter");
         const ageGroupFilters = getSelectedValues(".age-filter");
 
@@ -428,7 +432,10 @@
         const searchTerm = document.getElementById("gameSearch").value;
         const sortBy = document.getElementById("sortBySelect").value;
 
-        currentPage = 0;
+        currentPage = page;
+
+        const itemsPerPage = 20;
+        const startIndex = page * itemsPerPage;
 
         let params = new URLSearchParams();
 
@@ -469,8 +476,8 @@
         }
 
         params.append("sort_by", sortBy);
-        params.append("start_index", 0);
-        params.append("amount", 20);
+        params.append("start_index", startIndex);
+        params.append("amount", itemsPerPage);
 
         return fetch(`/wiki/api/v1/games?${params.toString()}`).then(
             (response) => {
@@ -485,20 +492,32 @@
     function displayGames(data) {
         const gamesList = document.getElementById("games-list");
         gamesList.innerHTML = ""; // Clear existing content
-        window.gamesData = data;
 
-        if (data.length === 0) {
+        if (!data.games || data.games.length === 0) {
             gamesList.innerHTML =
                 '<div class="alert alert-info">No games match your filters</div>';
+
+            // Hide pagination if no results
+            document.getElementById("pagination-container").style.display =
+                "none";
+            document.getElementById("load-more-btn").style.display = "none";
             return;
         }
 
-        data.forEach(function (game, index) {
+        // Store games data in window for other functions
+        window.gamesData = data.games;
+
+        // Update pagination info
+        updatePaginationInfo(data.pagination);
+
+        // Display games
+        data.games.forEach(function (game, index) {
             const gameItem = createGameItem(game, index);
             gamesList.innerHTML += gameItem;
         });
 
-        data.forEach(function (game, index) {
+        // Create radar charts
+        data.games.forEach(function (game, index) {
             createRadarChart(game, index);
         });
     }
@@ -517,6 +536,165 @@
         window.gamesData.forEach(function (game, index) {
             createRadarChart(game, index);
         });
+    }
+
+    function updatePaginationInfo(pagination) {
+        const totalCount = pagination.total_count;
+        const totalPages = pagination.total_pages;
+        const currentPageNum = currentPage + 1; // Convert to 1-based for display
+
+        // Show or hide load more button
+        const loadMoreBtn = document.getElementById("load-more-btn");
+        if (currentPageNum >= totalPages) {
+            loadMoreBtn.style.display = "none";
+        } else {
+            loadMoreBtn.style.display = "inline-block";
+        }
+
+        // Update pagination controls
+        generatePaginationControls(currentPageNum, totalPages);
+
+        // Update the pagination count text
+        const paginationInfo = document.getElementById("pagination-info");
+        const startItem = currentPage * 20 + 1;
+        const endItem = Math.min(currentPage * 20 + 20, totalCount);
+        paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalCount} games`;
+    }
+
+    function generatePaginationControls(currentPageNum, totalPages) {
+        const paginationElement = document.getElementById(
+            "pagination-controls",
+        );
+        paginationElement.innerHTML = "";
+
+        // Don't show pagination for 1 page
+        if (totalPages <= 1) {
+            document.getElementById("pagination-container").style.display =
+                "none";
+            return;
+        }
+
+        document.getElementById("pagination-container").style.display = "flex";
+
+        // Previous button
+        const prevLi = document.createElement("li");
+        prevLi.className = `page-item ${currentPageNum === 1 ? "disabled" : ""}`;
+        const prevA = document.createElement("a");
+        prevA.className = "page-link";
+        prevA.href = "#";
+        prevA.innerHTML = "&laquo;";
+        prevA.setAttribute("aria-label", "Previous");
+        if (currentPageNum > 1) {
+            prevA.onclick = function (e) {
+                e.preventDefault();
+                fetchGamesWithFilters(currentPage - 1).then(displayGames);
+            };
+        }
+        prevLi.appendChild(prevA);
+        paginationElement.appendChild(prevLi);
+
+        // Page numbers
+        const maxPagesToShow = 5;
+        let startPage = Math.max(
+            1,
+            currentPageNum - Math.floor(maxPagesToShow / 2),
+        );
+        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+        // Adjust if we're near the end
+        if (endPage - startPage + 1 < maxPagesToShow && startPage > 1) {
+            startPage = Math.max(1, endPage - maxPagesToShow + 1);
+        }
+
+        // First page if not in range
+        if (startPage > 1) {
+            const firstLi = document.createElement("li");
+            firstLi.className = "page-item";
+            const firstA = document.createElement("a");
+            firstA.className = "page-link";
+            firstA.href = "#";
+            firstA.textContent = "1";
+            firstA.onclick = function (e) {
+                e.preventDefault();
+                fetchGamesWithFilters(0).then(displayGames);
+            };
+            firstLi.appendChild(firstA);
+            paginationElement.appendChild(firstLi);
+
+            // Add ellipsis if needed
+            if (startPage > 2) {
+                const ellipsisLi = document.createElement("li");
+                ellipsisLi.className = "page-item disabled";
+                const ellipsisA = document.createElement("a");
+                ellipsisA.className = "page-link";
+                ellipsisA.innerHTML = "&hellip;";
+                ellipsisLi.appendChild(ellipsisA);
+                paginationElement.appendChild(ellipsisLi);
+            }
+        }
+
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement("li");
+            pageLi.className = `page-item ${i === currentPageNum ? "active" : ""}`;
+            const pageA = document.createElement("a");
+            pageA.className = "page-link";
+            pageA.href = "#";
+            pageA.textContent = i;
+
+            if (i !== currentPageNum) {
+                pageA.onclick = function (e) {
+                    e.preventDefault();
+                    fetchGamesWithFilters(i - 1).then(displayGames);
+                };
+            }
+
+            pageLi.appendChild(pageA);
+            paginationElement.appendChild(pageLi);
+        }
+
+        // Ellipsis and last page if not in range
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsisLi = document.createElement("li");
+                ellipsisLi.className = "page-item disabled";
+                const ellipsisA = document.createElement("a");
+                ellipsisA.className = "page-link";
+                ellipsisA.innerHTML = "&hellip;";
+                ellipsisLi.appendChild(ellipsisA);
+                paginationElement.appendChild(ellipsisLi);
+            }
+
+            const lastLi = document.createElement("li");
+            lastLi.className = "page-item";
+            const lastA = document.createElement("a");
+            lastA.className = "page-link";
+            lastA.href = "#";
+            lastA.textContent = totalPages;
+            lastA.onclick = function (e) {
+                e.preventDefault();
+                fetchGamesWithFilters(totalPages - 1).then(displayGames);
+            };
+            lastLi.appendChild(lastA);
+            paginationElement.appendChild(lastLi);
+        }
+
+        // Next button
+        const nextLi = document.createElement("li");
+        nextLi.className = `page-item ${currentPageNum === totalPages ? "disabled" : ""}`;
+        const nextA = document.createElement("a");
+        nextA.className = "page-link";
+        nextA.href = "#";
+        nextA.innerHTML = "&raquo;";
+        nextA.setAttribute("aria-label", "Next");
+        if (currentPageNum < totalPages) {
+            nextA.onclick = function (e) {
+                e.preventDefault();
+                fetchGamesWithFilters(currentPage + 1).then(displayGames);
+            };
+        }
+        nextLi.appendChild(nextA);
+        paginationElement.appendChild(nextLi);
     }
 
     function generateTagsBadges(tags) {

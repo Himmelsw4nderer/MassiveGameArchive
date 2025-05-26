@@ -16,7 +16,7 @@ Search functionality:
 from django.http import HttpRequest, JsonResponse
 from ninja import NinjaAPI, Schema, Query
 from typing import List
-from .services import search_games, get_paginated_games
+from .services import search_games, get_paginated_games, get_pagination_metadata
 
 
 api = NinjaAPI(urls_namespace="wiki_api")
@@ -34,15 +34,23 @@ class GameSchema(Schema):
     upvote_count: int
     downvote_count: int
 
+class PaginationMetadataSchema(Schema):
+    total_count: int
+    total_pages: int
+
+class GameListResponseSchema(Schema):
+    games: List[GameSchema]
+    pagination: PaginationMetadataSchema
+
 
 class ErrorResponseSchema(Schema):
     error: str
 
 @api.get(
     "/games",
-    response={200: List[GameSchema], 400: ErrorResponseSchema},
+    response={200: GameListResponseSchema, 400: ErrorResponseSchema},
     summary="Get a list of games",
-    description="Returns a paginated list of games with optional filtering and search options."
+    description="Returns a paginated list of games with optional filtering and search options along with pagination metadata."
 )
 def list_games(
     request: HttpRequest,
@@ -94,20 +102,30 @@ def list_games(
 
     # Get paginated results
     games = get_paginated_games(games_queryset, start_index, amount)
+    
+    # Get pagination metadata
+    pagination_metadata = get_pagination_metadata(games_queryset, amount)
 
-    return [
-        GameSchema(
-            title=game.title,
-            short_description=game.short_description,
-            slug=game.slug,
-            difficulty_index=game.difficulty_index,
-            group_size_index=game.group_size_index,
-            preperation_index=game.preperation_index,
-            physical_index=game.physical_index,
-            duration_index=game.duration_index,
-            tags=game.get_tags(),
-            age_groups=game.get_age_groups(),
-            upvote_count=game.get_upvote_count(),
-            downvote_count=game.get_downvote_count(),
-        ) for game in games
-    ]
+    # Construct response with both games and pagination metadata
+    return GameListResponseSchema(
+        games=[
+            GameSchema(
+                title=game.title,
+                short_description=game.short_description,
+                slug=game.slug,
+                difficulty_index=game.difficulty_index,
+                group_size_index=game.group_size_index,
+                preperation_index=game.preperation_index,
+                physical_index=game.physical_index,
+                duration_index=game.duration_index,
+                tags=game.get_tags(),
+                age_groups=game.get_age_groups(),
+                upvote_count=game.get_upvote_count(),
+                downvote_count=game.get_downvote_count(),
+            ) for game in games
+        ],
+        pagination=PaginationMetadataSchema(
+            total_count=pagination_metadata["total_count"],
+            total_pages=pagination_metadata["total_pages"]
+        )
+    )

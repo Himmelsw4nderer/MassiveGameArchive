@@ -159,3 +159,24 @@ def get_paginated_games(queryset: QuerySet, start_index: int, amount: int) -> Li
     """
     end_index = start_index + amount
     return list(queryset[start_index:end_index])
+
+def get_pagination_metadata(queryset: QuerySet, amount: int) -> dict:
+    """
+    Get pagination metadata for a queryset.
+    
+    Args:
+        queryset: QuerySet of Game objects
+        amount: Number of games per page
+    
+    Returns:
+        Dictionary containing pagination metadata:
+        - total_count: Total number of games
+        - total_pages: Total number of pages
+    """
+    total_count = queryset.count()
+    total_pages = (total_count + amount - 1) // amount if amount > 0 else 0
+    
+    return {
+        "total_count": total_count,
+        "total_pages": total_pages
+    }
