@@ -14,9 +14,9 @@ Search functionality:
 """
 
 from django.http import HttpRequest, JsonResponse
-from ninja import NinjaAPI, Schema, Query
-from typing import List
-from .services import search_games, get_paginated_games, get_pagination_metadata
+from ninja import NinjaAPI, Schema, Query, Path
+from typing import List, Optional
+from .services import search_games, get_paginated_games, get_pagination_metadata, get_game_by_slug
 
 
 api = NinjaAPI(urls_namespace="wiki_api")
@@ -34,6 +34,11 @@ class GameSchema(Schema):
     upvote_count: int
     downvote_count: int
 
+class GameDetailSchema(GameSchema):
+    markdown_content: Optional[str] = None
+    creator_username: str
+    created_at: str
+
 class PaginationMetadataSchema(Schema):
     total_count: int
     total_pages: int
@@ -45,6 +50,9 @@ class GameListResponseSchema(Schema):
 
 class ErrorResponseSchema(Schema):
     error: str
+
+class NotFoundResponseSchema(Schema):
+    detail: str
 
 @api.get(
     "/games",
@@ -81,7 +89,6 @@ def list_games(
             status=400
         )
 
-    # Use the search service to get filtered games
     games_queryset = search_games(
         query=q,
         search_in=search_in,
@@ -100,13 +107,10 @@ def list_games(
         sort_by=sort_by
     )
 
-    # Get paginated results
     games = get_paginated_games(games_queryset, start_index, amount)
-    
-    # Get pagination metadata
+
     pagination_metadata = get_pagination_metadata(games_queryset, amount)
 
-    # Construct response with both games and pagination metadata
     return GameListResponseSchema(
         games=[
             GameSchema(
@@ -128,4 +132,40 @@ def list_games(
             total_count=pagination_metadata["total_count"],
             total_pages=pagination_metadata["total_pages"]
         )
+    )
+
+@api.get(
+    "/games/{slug}",
+    response={200: GameDetailSchema, 404: NotFoundResponseSchema},
+    summary="Get game details by slug",
+    description="Returns detailed information about a specific game identified by its slug."
+)
+def get_game_detail(
+    request: HttpRequest,
+    slug: str = Path(..., description="The unique slug identifier for the game"),
+):
+    game = get_game_by_slug(slug)
+
+    if not game:
+        return JsonResponse(
+            NotFoundResponseSchema(detail=f"Game with slug '{slug}' not found"),
+            status=404
+        )
+
+    return GameDetailSchema(
+        title=game.title,
+        short_description=game.short_description,
+        slug=game.slug,
+        difficulty_index=game.difficulty_index,
+        group_size_index=game.group_size_index,
+        preperation_index=game.preperation_index,
+        physical_index=game.physical_index,
+        duration_index=game.duration_index,
+        tags=game.get_tags(),
+        age_groups=game.get_age_groups(),
+        upvote_count=game.get_upvote_count(),
+        downvote_count=game.get_downvote_count(),
+        markdown_content=game.markdown_content,
+        creator_username=game.creator.username,
+        created_at=game.created_at.isoformat(),
     )

@@ -576,7 +576,13 @@
 
         document.getElementById("pagination-container").style.display = "flex";
 
-        // Previous button
+        // Build pagination components
+        addPreviousButton(paginationElement, currentPageNum);
+        addPageNumbers(paginationElement, currentPageNum, totalPages);
+        addNextButton(paginationElement, currentPageNum, totalPages);
+    }
+
+    function addPreviousButton(paginationElement, currentPageNum) {
         const prevLi = document.createElement("li");
         prevLi.className = `page-item ${currentPageNum === 1 ? "disabled" : ""}`;
         const prevA = document.createElement("a");
@@ -592,9 +598,29 @@
         }
         prevLi.appendChild(prevA);
         paginationElement.appendChild(prevLi);
+    }
 
-        // Page numbers
+    function addPageNumbers(paginationElement, currentPageNum, totalPages) {
         const maxPagesToShow = 5;
+        const { startPage, endPage } = calculatePageRange(
+            currentPageNum,
+            totalPages,
+            maxPagesToShow,
+        );
+
+        // Add first page and ellipsis if necessary
+        addFirstPageIfNeeded(paginationElement, startPage);
+
+        // Add page numbers in the range
+        for (let i = startPage; i <= endPage; i++) {
+            addPageNumber(paginationElement, i, currentPageNum);
+        }
+
+        // Add ellipsis and last page if necessary
+        addLastPageIfNeeded(paginationElement, endPage, totalPages);
+    }
+
+    function calculatePageRange(currentPageNum, totalPages, maxPagesToShow) {
         let startPage = Math.max(
             1,
             currentPageNum - Math.floor(maxPagesToShow / 2),
@@ -606,7 +632,10 @@
             startPage = Math.max(1, endPage - maxPagesToShow + 1);
         }
 
-        // First page if not in range
+        return { startPage, endPage };
+    }
+
+    function addFirstPageIfNeeded(paginationElement, startPage) {
         if (startPage > 1) {
             const firstLi = document.createElement("li");
             firstLi.className = "page-item";
@@ -623,46 +652,34 @@
 
             // Add ellipsis if needed
             if (startPage > 2) {
-                const ellipsisLi = document.createElement("li");
-                ellipsisLi.className = "page-item disabled";
-                const ellipsisA = document.createElement("a");
-                ellipsisA.className = "page-link";
-                ellipsisA.innerHTML = "&hellip;";
-                ellipsisLi.appendChild(ellipsisA);
-                paginationElement.appendChild(ellipsisLi);
+                addEllipsis(paginationElement);
             }
         }
+    }
 
-        // Page numbers
-        for (let i = startPage; i <= endPage; i++) {
-            const pageLi = document.createElement("li");
-            pageLi.className = `page-item ${i === currentPageNum ? "active" : ""}`;
-            const pageA = document.createElement("a");
-            pageA.className = "page-link";
-            pageA.href = "#";
-            pageA.textContent = i;
+    function addPageNumber(paginationElement, pageNumber, currentPageNum) {
+        const pageLi = document.createElement("li");
+        pageLi.className = `page-item ${pageNumber === currentPageNum ? "active" : ""}`;
+        const pageA = document.createElement("a");
+        pageA.className = "page-link";
+        pageA.href = "#";
+        pageA.textContent = pageNumber;
 
-            if (i !== currentPageNum) {
-                pageA.onclick = function (e) {
-                    e.preventDefault();
-                    fetchGamesWithFilters(i - 1).then(displayGames);
-                };
-            }
-
-            pageLi.appendChild(pageA);
-            paginationElement.appendChild(pageLi);
+        if (pageNumber !== currentPageNum) {
+            pageA.onclick = function (e) {
+                e.preventDefault();
+                fetchGamesWithFilters(pageNumber - 1).then(displayGames);
+            };
         }
 
-        // Ellipsis and last page if not in range
+        pageLi.appendChild(pageA);
+        paginationElement.appendChild(pageLi);
+    }
+
+    function addLastPageIfNeeded(paginationElement, endPage, totalPages) {
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) {
-                const ellipsisLi = document.createElement("li");
-                ellipsisLi.className = "page-item disabled";
-                const ellipsisA = document.createElement("a");
-                ellipsisA.className = "page-link";
-                ellipsisA.innerHTML = "&hellip;";
-                ellipsisLi.appendChild(ellipsisA);
-                paginationElement.appendChild(ellipsisLi);
+                addEllipsis(paginationElement);
             }
 
             const lastLi = document.createElement("li");
@@ -678,8 +695,19 @@
             lastLi.appendChild(lastA);
             paginationElement.appendChild(lastLi);
         }
+    }
 
-        // Next button
+    function addEllipsis(paginationElement) {
+        const ellipsisLi = document.createElement("li");
+        ellipsisLi.className = "page-item disabled";
+        const ellipsisA = document.createElement("a");
+        ellipsisA.className = "page-link";
+        ellipsisA.innerHTML = "&hellip;";
+        ellipsisLi.appendChild(ellipsisA);
+        paginationElement.appendChild(ellipsisLi);
+    }
+
+    function addNextButton(paginationElement, currentPageNum, totalPages) {
         const nextLi = document.createElement("li");
         nextLi.className = `page-item ${currentPageNum === totalPages ? "disabled" : ""}`;
         const nextA = document.createElement("a");
@@ -724,11 +752,14 @@
         const tagsHtml = generateTagsBadges(game.tags);
         const ageGroupsHtml = generateAgeGroupBadges(game.age_groups);
 
+        // Add a title attribute to show users it's clickable
+        const titleAttr = `Click to view details for ${game.title}`;
+
         return `
-        <li class="list-group-item" onclick="window.location='/wiki/games/${game.id}'" style="cursor: pointer;">
+        <li class="list-group-item list-group-item-action" title="${titleAttr}" onclick="window.location.href='/wiki/game/${game.slug}/'" style="cursor: pointer;">
             <div class="row">
                 <div class="col-xl-8 col-lg-6 order-md-1 order-1">
-                    <h5>${game.title}</h5>
+                    <h5 class="fw-bold mb-3">${game.title}</h5>
                     <div class="mb-2">
                         ${tagsHtml}
                         ${ageGroupsHtml}

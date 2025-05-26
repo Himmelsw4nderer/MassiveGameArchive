@@ -36,7 +36,7 @@ def search_games(
 ) -> QuerySet:
     """
     Search and filter games based on various criteria.
-    
+
     Args:
         query: Search query for finding games by title, description, and content
         search_in: Fields to search in: 'title', 'description', 'content', or 'all'
@@ -53,27 +53,23 @@ def search_games(
         min_duration_index: Minimum game duration level (1-10)
         max_duration_index: Maximum game duration level (1-10)
         sort_by: Sort results by: 'relevance', 'title', 'newest', 'upvotes'
-    
+
     Returns:
         QuerySet of filtered and sorted Game objects
     """
     games_queryset = Game.objects.all()
 
-    # Apply text search if query provided
     if query:
         games_queryset = _apply_text_search(games_queryset, query, search_in)
 
-    # Apply tag filtering
     if tag_filter:
         for tag in tag_filter:
             games_queryset = games_queryset.filter(tags__name=tag)
 
-    # Apply age group filtering
     if age_group_filter:
         for age_group in age_group_filter:
             games_queryset = games_queryset.filter(age_groups__name=age_group)
 
-    # Apply range filtering
     games_queryset = games_queryset.filter(
         difficulty_index__gte=min_difficulty_index,
         difficulty_index__lte=max_difficulty_index,
@@ -87,7 +83,6 @@ def search_games(
         duration_index__lte=max_duration_index,
     )
 
-    # Apply sorting
     games_queryset = _apply_sorting(games_queryset, sort_by)
 
     return games_queryset
@@ -124,7 +119,7 @@ def _apply_text_search(queryset: QuerySet, query: str, search_in: List[str]) -> 
             search_query &= term_query
 
         queryset = queryset.filter(search_query)
-    
+
     return queryset
 
 def _apply_sorting(queryset: QuerySet, sort_by: str) -> QuerySet:
@@ -142,18 +137,18 @@ def _apply_sorting(queryset: QuerySet, sort_by: str) -> QuerySet:
                 )
             )
         ).order_by("-upvote_count")
-    
+
     return queryset
 
 def get_paginated_games(queryset: QuerySet, start_index: int, amount: int) -> List[Game]:
     """
     Get a paginated subset of games from a queryset.
-    
+
     Args:
         queryset: QuerySet of Game objects
         start_index: Starting index for pagination (0-based)
         amount: Number of games to return
-    
+
     Returns:
         List of Game objects
     """
@@ -163,11 +158,11 @@ def get_paginated_games(queryset: QuerySet, start_index: int, amount: int) -> Li
 def get_pagination_metadata(queryset: QuerySet, amount: int) -> dict:
     """
     Get pagination metadata for a queryset.
-    
+
     Args:
         queryset: QuerySet of Game objects
         amount: Number of games per page
-    
+
     Returns:
         Dictionary containing pagination metadata:
         - total_count: Total number of games
@@ -175,8 +170,23 @@ def get_pagination_metadata(queryset: QuerySet, amount: int) -> dict:
     """
     total_count = queryset.count()
     total_pages = (total_count + amount - 1) // amount if amount > 0 else 0
-    
+
     return {
         "total_count": total_count,
         "total_pages": total_pages
     }
+
+def get_game_by_slug(slug: str):
+    """
+    Get a game by its slug.
+    
+    Args:
+        slug: The unique slug identifier for the game
+        
+    Returns:
+        Game object or None if not found
+    """
+    try:
+        return Game.objects.get(slug=slug)
+    except Game.DoesNotExist:
+        return None
