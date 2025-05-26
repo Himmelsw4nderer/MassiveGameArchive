@@ -88,9 +88,7 @@ def list_games(
 
     games_queryset = Game.objects.all()
 
-    # Enhanced search functionality
     if q:
-        # PostgreSQL full-text search (if available and PostgreSQL is being used)
         if HAS_POSTGRES_SEARCH and connection.vendor == 'postgresql':
             search_vector = SearchVector('title', weight='A') + \
                            SearchVector('short_description', weight='B') + \
@@ -101,10 +99,8 @@ def list_games(
                 rank=SearchRank(search_vector, search_query)
             ).filter(search=search_query).order_by('-rank')
         else:
-            # Standard search with improved multi-term handling
             search_query = Q()
-            
-            # Determine which fields to search based on search_in parameter
+
             fields_to_search = []
             if "all" in search_in or not search_in:
                 fields_to_search = ["title", "short_description", "markdown_content"]
@@ -112,17 +108,16 @@ def list_games(
                 if "title" in search_in:
                     fields_to_search.append("title")
                 if "description" in search_in:
-                    fields_to_search.append("short_description")  
+                    fields_to_search.append("short_description")
                 if "content" in search_in:
                     fields_to_search.append("markdown_content")
-            
-            # Build query for each search term
+
             for term in q.split():
                 term_query = Q()
                 for field in fields_to_search:
                     term_query |= Q(**{f"{field}__icontains": term})
                 search_query &= term_query
-            
+
             games_queryset = games_queryset.filter(search_query)
 
     if tag_filter:
@@ -146,13 +141,11 @@ def list_games(
         duration_index__lte=max_duration_index,
     )
 
-    # Apply sorting
     if sort_by == "title":
         games_queryset = games_queryset.order_by("title")
     elif sort_by == "newest":
-        games_queryset = games_queryset.order_by("-id")  # Assuming newer games have higher IDs
+        games_queryset = games_queryset.order_by("-created_at")
     elif sort_by == "upvotes":
-        # Annotate with upvote counts and sort
         games_queryset = games_queryset.annotate(
             upvote_count=Count(
                 Case(
@@ -161,8 +154,6 @@ def list_games(
                 )
             )
         ).order_by("-upvote_count")
-    # Default is relevance, which is handled by the search function
-    # or left as-is for no search
 
     end_index = start_index + amount
     games = games_queryset[start_index:end_index]

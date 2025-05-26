@@ -23,6 +23,32 @@
                     <h6
                         class="filter-heading"
                         data-bs-toggle="collapse"
+                        href="#sortCollapse"
+                        role="button"
+                    >
+                        <i class="fas fa-chevron-down me-1"></i> Sort By
+                    </h6>
+                    <div class="collapse show" id="sortCollapse">
+                        <div class="px-2 py-2">
+                            <select class="form-select" id="sortBySelect">
+                                <option value="relevance" selected>
+                                    Relevance
+                                </option>
+                                <option value="newest">Newest</option>
+                                <option value="popular">Most Popular</option>
+                                <option value="rating">Highest Rated</option>
+                                <option value="alphabetical">
+                                    Alphabetical
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-section mt-3">
+                    <h6
+                        class="filter-heading"
+                        data-bs-toggle="collapse"
                         href="#tagCollapse"
                         role="button"
                     >
@@ -400,6 +426,7 @@
             .noUiSlider.get();
 
         const searchTerm = document.getElementById("gameSearch").value;
+        const sortBy = document.getElementById("sortBySelect").value;
 
         currentPage = 0;
 
@@ -441,6 +468,7 @@
             lastSearchTerm = searchTerm;
         }
 
+        params.append("sort_by", sortBy);
         params.append("start_index", 0);
         params.append("amount", 20);
 

@@ -16,6 +16,7 @@ class Game(models.Model):
     slug = models.SlugField(unique=True, blank=True)
     markdown_content = models.TextField(blank=True, null=True)
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='games_created')
+    created_at = models.DateTimeField(auto_now_add=True)
     difficulty_index = models.IntegerField(choices=[(i, i) for i in range(1, 11)], default=5)
     group_size_index = models.IntegerField(choices=[(i, i) for i in range(1, 11)], default=5)
     preperation_index = models.IntegerField(choices=[(i, i) for i in range(1, 11)], default=5)
