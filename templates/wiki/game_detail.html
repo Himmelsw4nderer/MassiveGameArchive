@@ -1,24 +1,29 @@
-{% extends 'base.html' %} 
-
-{% block title %}{{ game.title }} | Massive Game Archive{% endblock %}
-
-{% block content %}
+{% extends 'base.html' %} {% block title %}{{ game.title }} | Massive Game
+Archive{% endblock %} {% block content %}
 <div class="row">
     <!-- Game Header Section -->
     <div class="col-12 mb-4">
         <div class="d-flex justify-content-between align-items-center">
             <h1>{{ game.title }}</h1>
             <div>
-                <button id="upvote-btn" class="btn btn-sm btn-outline-success me-2">
-                    <i class="fas fa-thumbs-up"></i> <span id="upvote-count">{{ game.get_upvote_count }}</span>
+                <button
+                    id="upvote-btn"
+                    class="btn btn-sm btn-outline-success me-2"
+                >
+                    <i class="fas fa-thumbs-up"></i>
+                    <span id="upvote-count">{{ game.get_upvote_count }}</span>
                 </button>
                 <button id="downvote-btn" class="btn btn-sm btn-outline-danger">
-                    <i class="fas fa-thumbs-down"></i> <span id="downvote-count">{{ game.get_downvote_count }}</span>
+                    <i class="fas fa-thumbs-down"></i>
+                    <span id="downvote-count"
+                        >{{ game.get_downvote_count }}</span
+                    >
                 </button>
             </div>
         </div>
         <p class="text-muted">
-            Created by {{ game.creator.username }} on {{ game.created_at|date:"F d, Y" }}
+            Created by <span> {{ game.creator.username }} </span> on
+            <span> {{ game.created_at|date:"F d, Y" }} </span>
         </p>
     </div>
 
@@ -28,26 +33,26 @@
             <div class="card-body">
                 <h2 class="card-title">Description</h2>
                 <p class="lead">{{ game.short_description }}</p>
-                
+
                 <!-- Tags and Age Groups -->
                 <div class="mb-3">
                     <h5>Tags:</h5>
                     <div>
                         {% for tag in game.tags.all %}
-                            <span class="badge bg-primary me-1">{{ tag }}</span>
+                        <span class="badge bg-primary me-1">{{ tag }}</span>
                         {% empty %}
-                            <span class="text-muted">No tags</span>
+                        <span class="text-muted">No tags</span>
                         {% endfor %}
                     </div>
                 </div>
-                
+
                 <div class="mb-3">
                     <h5>Age Groups:</h5>
                     <div>
                         {% for age_group in game.age_groups.all %}
-                            <span class="badge bg-info me-1">{{ age_group }}</span>
+                        <span class="badge bg-info me-1">{{ age_group }}</span>
                         {% empty %}
-                            <span class="text-muted">No age groups specified</span>
+                        <span class="text-muted">No age groups specified</span>
                         {% endfor %}
                     </div>
                 </div>
@@ -78,28 +83,46 @@
                 <h2 class="card-title h5 mb-0">Game Stats</h2>
             </div>
             <div class="card-body">
-                <canvas id="game-radar-chart" width="400" height="300"></canvas>
-                
-                <ul class="list-group list-group-flush mt-3">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                <ul class="list-group list-group-flush">
+                    <li
+                        class="list-group-item d-flex justify-content-between align-items-center"
+                    >
                         Difficulty
-                        <span class="badge bg-primary rounded-pill">{{ game.difficulty_index }}/10</span>
+                        <span class="badge bg-primary rounded-pill"
+                            >{{ game.difficulty_index }}/10</span
+                        >
                     </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <li
+                        class="list-group-item d-flex justify-content-between align-items-center"
+                    >
                         Group Size
-                        <span class="badge bg-primary rounded-pill">{{ game.group_size_index }}/10</span>
+                        <span class="badge bg-primary rounded-pill"
+                            >{{ game.group_size_index }}/10</span
+                        >
                     </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <li
+                        class="list-group-item d-flex justify-content-between align-items-center"
+                    >
                         Preparation
-                        <span class="badge bg-primary rounded-pill">{{ game.preperation_index }}/10</span>
+                        <span class="badge bg-primary rounded-pill"
+                            >{{ game.preperation_index }}/10</span
+                        >
                     </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <li
+                        class="list-group-item d-flex justify-content-between align-items-center"
+                    >
                         Physical Activity
-                        <span class="badge bg-primary rounded-pill">{{ game.physical_index }}/10</span>
+                        <span class="badge bg-primary rounded-pill"
+                            >{{ game.physical_index }}/10</span
+                        >
                     </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <li
+                        class="list-group-item d-flex justify-content-between align-items-center"
+                    >
                         Duration
-                        <span class="badge bg-primary rounded-pill">{{ game.duration_index }}/10</span>
+                        <span class="badge bg-primary rounded-pill"
+                            >{{ game.duration_index }}/10</span
+                        >
                     </li>
                 </ul>
             </div>
@@ -111,93 +134,14 @@
                 <h2 class="card-title h5 mb-0">Related Games</h2>
             </div>
             <div class="card-body">
-                <p class="text-muted">Related games functionality coming soon!</p>
+                <p class="text-muted">
+                    Related games functionality coming soon!
+                </p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Include Markdown Renderer Library -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Render Markdown content
-        const markdownContent = document.getElementById('markdown-content');
-        if (markdownContent && markdownContent.textContent.trim() !== '') {
-            markdownContent.innerHTML = marked.parse(markdownContent.textContent);
-        }
-        
-        // Create radar chart
-        const gameData = {
-            difficulty: {{ game.difficulty_index }},
-            groupSize: {{ game.group_size_index }},
-            preparation: {{ game.preperation_index }},
-            physical: {{ game.physical_index }},
-            duration: {{ game.duration_index }}
-        };
-        
-        createRadarChart(gameData);
-        
-        // Handle voting
-        document.getElementById('upvote-btn').addEventListener('click', function() {
-            // Vote API call would go here
-            console.log('Upvoted');
-        });
-        
-        document.getElementById('downvote-btn').addEventListener('click', function() {
-            // Vote API call would go here
-            console.log('Downvoted');
-        });
-    });
-    
-    function createRadarChart(gameData) {
-        const ctx = document.getElementById('game-radar-chart').getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: [
-                    'Difficulty',
-                    'Group Size',
-                    'Preparation',
-                    'Physical',
-                    'Duration'
-                ],
-                datasets: [{
-                    label: 'Game Attributes',
-                    data: [
-                        gameData.difficulty,
-                        gameData.groupSize,
-                        gameData.preparation,
-                        gameData.physical,
-                        gameData.duration
-                    ],
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
-                }]
-            },
-            options: {
-                elements: {
-                    line: {
-                        borderWidth: 3
-                    }
-                },
-                scales: {
-                    r: {
-                        angleLines: {
-                            display: true
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 10
-                    }
-                }
-            }
-        });
-    }
-</script>
+{% load static %}
+<script src="{% static 'wiki/scripts/game_detail.js' %}"></script>
 {% endblock %}
